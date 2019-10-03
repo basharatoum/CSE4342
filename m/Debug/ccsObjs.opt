@@ -1,0 +1,1 @@
+"./keyboard.obj" "./main.obj" "./startup_ccs.obj" "../tm4c123gh6pm.cmd" -llibc.a 
