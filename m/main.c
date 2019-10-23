@@ -1,4 +1,4 @@
-// Color emitter Project
+// Gyroscope project
 // Ulysses Aguilar
 // Bashar Al Atom
 //-----------------------------------------------------------------------------
@@ -20,11 +20,15 @@
 //-----------------------------------------------------------------------------
 #include <stdint.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <stdbool.h>
-#include <string.h>
 #include <math.h>
 #include "tm4c123gh6pm.h"
+#include <string.h>
 
+// PortB masks
+#define SDA_MASK 8
+#define SCL_MASK 4
 #define  MAX_CHARS 100
 
 
@@ -42,6 +46,51 @@ uint8_t NArgs = 0;
 //-----------------------------------------------------------------------------
 // Subroutines
 //-----------------------------------------------------------------------------
+
+void initI2c0()
+{
+    // Enable clocks
+    SYSCTL_RCGCI2C_R |= SYSCTL_RCGCI2C_R0;
+    SYSCTL_RCGC2_R |= SYSCTL_RCGC2_GPIOB;
+
+    // Configure I2C
+    GPIO_PORTB_DIR_R |= SDA_MASK | SCL_MASK;            // make bits 2 and 3 outputs
+    GPIO_PORTB_DR2R_R |= SDA_MASK | SCL_MASK;           // set drive strength to 2mA
+    GPIO_PORTB_DEN_R |= SDA_MASK | SCL_MASK;            // enable digital
+    GPIO_PORTB_ODR_R |= SDA_MASK;                       // enable open drain outputs
+    GPIO_PORTB_AFSEL_R |= SDA_MASK | SCL_MASK;          // configure auxiliary fn
+    GPIO_PORTB_PCTL_R &= ~(GPIO_PCTL_PB2_M | GPIO_PCTL_PB3_M);
+    GPIO_PORTB_PCTL_R |= GPIO_PCTL_PB2_I2C0SCL | GPIO_PCTL_PB3_I2C0SDA;
+
+    // Configure I2C0 peripheral
+    I2C0_MCR_R = I2C_MCR_MFE;                           // master
+    I2C0_MTPR_R = 19;                                   // (40MHz/2) / (19+1) = 100kbps
+}
+
+void initTemp(){
+    SYSCTL_RCGCADC_R |= 1;       /* enable clock to ADC0 */
+    waitMicrosecond(10000);
+
+    ADC0_CC_R=ADC_CC_CS_SYSPLL;
+    waitMicrosecond(10000);
+
+    /* initialize ADC0 */
+    ADC0_ACTSS_R &= ~8;          /* disable SS3 during configuration */
+    ADC0_EMUX_R = ADC_EMUX_EM3_PROCESSOR;
+    ADC0_SSMUX3_R = 0;           /* get input from channel 0 */
+    waitMicrosecond(10000);
+
+    ADC0_SSCTL3_R |= 0x0A;       /* take chip temperature, set flag at 1st sample */
+    ADC0_ACTSS_R |= 8;           /* enable ADC0 sequencer 3 */
+}
+
+uint32_t getTemp(){
+    uint32_t temperature;
+    ADC0_PSSI_R |=ADC_PSSI_SS3;
+    while(ADC0_ACTSS_R&ADC_ACTSS_BUSY);                    /* wait for conversion complete */
+      temperature = 147 - (247 * ADC0_SSFIFO3_R) / 4096;
+      return temperature;
+}
 // Initialize Hardware
 void initHw()
 {
@@ -78,8 +127,89 @@ void initHw()
     HIB_CTL_R = HIB_CTL_CLK32EN | HIB_CTL_RTCEN ;
 
 
+
+}
+uint8_t asciiToUint8(const char str[])
+{
+    uint8_t data;
+    if (str[0] == '0' && tolower(str[1]) == 'x')
+        sscanf(str, "%hhx", &data);
+    else
+        sscanf(str, "%hhu", &data);
+    return data;
 }
 
+
+void writeI2c0Register(uint8_t add, uint8_t reg, uint8_t data)
+{
+    I2C0_MSA_R = add*2;
+    I2C0_MDR_R = reg;
+    I2C0_MICR_R = I2C_MICR_IC;
+    I2C0_MCS_R = I2C_MCS_START | I2C_MCS_RUN;
+    while ((I2C0_MRIS_R & I2C_MRIS_RIS) == 0);
+    I2C0_MDR_R = data;
+    I2C0_MICR_R = I2C_MICR_IC;
+    I2C0_MCS_R = I2C_MCS_STOP | I2C_MCS_RUN;
+    while (!(I2C0_MRIS_R & I2C_MRIS_RIS));
+}
+
+void writeI2c0Registers(uint8_t add, uint8_t reg, uint8_t data[], uint8_t size)
+{
+    uint8_t i;
+    I2C0_MSA_R = add*2;
+    I2C0_MDR_R = reg;
+    if (size == 0)
+    {
+        I2C0_MICR_R = I2C_MICR_IC;
+        I2C0_MCS_R = I2C_MCS_STOP | I2C_MCS_START | I2C_MCS_RUN;
+        while ((I2C0_MRIS_R & I2C_MRIS_RIS) == 0);
+    }
+    else
+    {
+        I2C0_MICR_R = I2C_MICR_IC;
+        I2C0_MCS_R = I2C_MCS_START | I2C_MCS_RUN;
+        while ((I2C0_MRIS_R & I2C_MRIS_RIS) == 0);
+        for (i = 0; i < size-1; i++)
+        {
+            I2C0_MDR_R = data[i];
+            I2C0_MICR_R = I2C_MICR_IC;
+            I2C0_MCS_R = I2C_MCS_RUN;
+            while ((I2C0_MRIS_R & I2C_MRIS_RIS) == 0);
+        }
+        I2C0_MDR_R = data[size-1];
+        I2C0_MICR_R = I2C_MICR_IC;
+        I2C0_MCS_R = I2C_MCS_STOP | I2C_MCS_RUN;
+        while ((I2C0_MRIS_R & I2C_MRIS_RIS) == 0);
+    }
+}
+
+uint8_t readI2c0Register(uint8_t add, uint8_t reg)
+{
+    I2C0_MSA_R = add*2;
+    I2C0_MDR_R = reg;
+    I2C0_MICR_R = I2C_MICR_IC;
+    I2C0_MCS_R = I2C_MCS_START | I2C_MCS_RUN;
+    while ((I2C0_MRIS_R & I2C_MRIS_RIS) == 0);
+    I2C0_MSA_R = add*2 + 1;
+    I2C0_MICR_R = I2C_MICR_IC;
+    I2C0_MCS_R = I2C_MCS_STOP | I2C_MCS_START | I2C_MCS_RUN;
+    while ((I2C0_MRIS_R & I2C_MRIS_RIS) == 0);
+    return I2C0_MDR_R;
+}
+
+bool pollI2c0Address(uint8_t add)
+{
+    I2C0_MSA_R = add*2 + 1;
+    I2C0_MICR_R = I2C_MICR_IC;
+    I2C0_MCS_R = I2C_MCS_STOP | I2C_MCS_START | I2C_MCS_RUN;
+    while ((I2C0_MRIS_R & I2C_MRIS_RIS) == 0);
+    return !(I2C0_MCS_R & I2C_MCS_ERROR);
+}
+
+bool isI2c0Error()
+{
+    return !(I2C0_MCS_R & I2C_MCS_ERROR);
+}
 
 // utility function used for delta command, returns absolute value
 int32_t abs(int32_t a)
@@ -308,7 +438,12 @@ int main(void)
 {
     // Initialize hardware
     initHw();
+    // Initialize I2c
+    initI2c0();
+    // Initialize Temp sensor
+    initTemp();
     int16_t i = 0;
+    uint8_t add,reg,data;
     uint16_t raw; // r,g, and b are used to set the color of the leds
                        // raw is used to get the value of the anolog input
     uint16_t T=3500;  // the threshold value used for the calibrate command
@@ -336,9 +471,57 @@ int main(void)
             putsUart0(str);
         }
 
-        // wait for 10 milliseconds to make sure the light is on
-        waitMicrosecond(10000);
+        if(isCommand("reset",0)){
+            putsUart0("resetting");
+            NVIC_APINT_R = NVIC_APINT_SYSRESETREQ|NVIC_APINT_VECTKEY;
+            putsUart0("reseted");
 
+        }
+        // wait for 10 milliseconds to make sure the light is on
+
+        if (isCommand("write",3))
+        {
+            add = asciiToUint8(tokens[1]);
+            reg = asciiToUint8(tokens[2]);
+            data = asciiToUint8(tokens[3]);
+            writeI2c0Register(add, reg, data);
+            sprintf(str, "Writing 0x%02hhx to address 0x%02hhx, register 0x%02hhx\n", data, add, reg);
+            putsUart0(str);
+        }
+        if (isCommand("read",2))
+        {
+            add = asciiToUint8(tokens[1]);
+            reg = asciiToUint8(tokens[2]);
+            data = readI2c0Register(add, reg);
+            sprintf(str, "Read 0x%02hhx from address 0x%02hhx, register 0x%02hhx\n", data, add, reg);
+            putsUart0(str);
+        }
+        if (isCommand("poll",0))
+        {
+            putsUart0("Devices found: ");
+            for (i = 4; i < 119; i++)
+            {
+                if (pollI2c0Address(i))
+                {
+                    sprintf(str, "0x%02x ", i);
+                    putsUart0(str);
+                }
+            }
+            putsUart0("\n");
+        }
+        if (isCommand("help",0))
+        {
+            putsUart0("poll\n");
+            putsUart0("read ADD REG\n");
+            putsUart0("write ADD REG DATA\n");
+        }
+
+        if(isCommand("temp",0)){
+            uint32_t g = getTemp();
+            sprintf(str, "%d\n", g);
+            putsUart0(str);
+        }
+        waitMicrosecond(10000);
 
         // nullify the input string to take other inputs
         for(j =0;j<MAX_CHARS;++j)

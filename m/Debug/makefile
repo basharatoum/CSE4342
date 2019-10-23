@@ -10,7 +10,6 @@ GEN_OPTS__FLAG :=
 GEN_CMDS__FLAG := 
 
 ORDERED_OBJS += \
-"./keyboard.obj" \
 "./main.obj" \
 "./startup_ccs.obj" \
 "../tm4c123gh6pm.cmd" \
@@ -156,8 +155,8 @@ m.hex: $(EXE_OUTPUTS)
 # Other Targets
 clean:
 	-$(RM) $(BIN_OUTPUTS__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "keyboard.obj" "main.obj" "startup_ccs.obj" 
-	-$(RM) "keyboard.d" "main.d" "startup_ccs.d" 
+	-$(RM) "main.obj" "startup_ccs.obj" 
+	-$(RM) "main.d" "startup_ccs.d" 
 	-@echo 'Finished clean'
 	-@echo ' '
 
