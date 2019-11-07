@@ -42,7 +42,22 @@ char strinput[MAX_CHARS];
 char* tokens[10];
 // this is used to store the number of arguments
 uint8_t NArgs = 0;
+uint32_t RTC_Old=0;
 
+struct time{
+    uint16_t hrs;
+    uint16_t min;
+    uint16_t sec;
+};
+struct date{
+    uint16_t mth;
+    uint16_t day;
+    uint16_t yr;
+};
+
+uint16_t daysOfEachMonth[12] = {31,28,31,30,31,30,31,31,30,31,30,31};
+struct time storedTime;
+struct date storedDate;
 //-----------------------------------------------------------------------------
 // Subroutines
 //-----------------------------------------------------------------------------
@@ -391,20 +406,6 @@ void waitMicrosecond(uint32_t us)
                                                 // 40 clocks/us + error
 }
 
-struct time{
-    uint16_t hrs;
-    uint16_t min;
-    uint16_t sec;
-};
-struct date{
-    uint16_t mth;
-    uint16_t day;
-    uint16_t yr;
-};
-
-uint16_t daysOfEachMonth[12] = {31,28,31,30,31,30,31,31,30,31,30,31};
-struct time storedTime;
-struct date storedDate;
 
 void newDateFromDay(uint16_t daysToAdd){
         storedDate.day += daysToAdd;
@@ -427,11 +428,68 @@ void newDateFromDay(uint16_t daysToAdd){
 }
 
 void setStoredTimeAndDate(uint32_t RTC){
+    RTC += (storedTime.hrs*3600+storedTime.min*60+storedTime.sec);
     storedTime.hrs = (RTC/3600)%24;
     storedTime.min = (RTC/60)%60;
     storedTime.sec = (RTC)%60;
     uint16_t days =  (RTC/86400);
     newDateFromDay(days);
+}
+
+void resetRTC(){
+    while(!HIB_CTL_WRC&HIB_CTL_R);
+    HIB_RTCLD_R = 0;
+}
+int validateTime(uint16_t hrs,uint16_t min,uint16_t sec){
+    if(hrs>=0 && hrs<24)
+        if(min>=0 && min<60)
+            if(sec >= 0 && sec<60)
+                return 1;
+    return 0;
+}
+int validateDate(uint16_t mth,uint16_t day,uint16_t yr){
+    if(mth>0 && mth<=12)
+        {
+        if(day>0 && day<=daysOfEachMonth[mth-1]&& mth !=2)
+            if(yr>=0)
+                return 1;
+
+        if(mth == 2 && yr> 0 && (yr%4==0)^(yr%100==0)^(yr%400==0)&& day>0 && day <daysOfEachMonth[mth-1]+1)
+            return 1;
+        }
+    return 0;
+}
+void printTime(uint32_t RTC){
+    char str[60];
+    RTC += (storedTime.hrs*3600+storedTime.min*60+storedTime.sec);
+    sprintf(str, "%d:%d:%d\n",(RTC/3600)%24,(RTC/60)%60,(RTC)%60);
+    putsUart0(str);
+}
+void printDate(uint32_t RTC){
+    char str[60];
+    uint16_t day,mth,yr;
+    RTC += (storedTime.hrs*3600+storedTime.min*60+storedTime.sec);
+    day = storedDate.day+ RTC/86400;
+    mth = storedDate.mth;
+    yr = storedDate.yr;
+    while(day>daysOfEachMonth[mth-1]){
+        if((yr%4==0)^(yr%100==0)^(yr%400==0)){
+                    if(mth == 2 &&day>daysOfEachMonth[1]+1){
+                        mth+=1;
+                        day -=daysOfEachMonth[1]+1;
+                    }
+        }else{
+            day-=daysOfEachMonth[mth-1];
+            mth+=1;
+        }
+
+        if(mth>=12){
+            yr+=1;
+            mth-=12;
+        }
+    }
+    sprintf(str,"%d / %d / %d\n",mth,day,yr);
+    putsUart0(str);
 }
 
 int main(void)
@@ -462,13 +520,44 @@ int main(void)
         getsUart0(&strinput,100); // get the input from the UART
         putsUart0("\r\n");
         parse_string(); // tokenize the input
-
-        if(isCommand("timeit",0))  // if the command is an rgb command
+        if (isCommand("time",3))
         {
-            setStoredTimeAndDate(HIB_RTCC_R);
-        }else if(isCommand("time",0)){
-            sprintf(str,"%d - %d - %d, %d:%d:%d\n",storedDate.mth,storedDate.day,storedDate.yr,storedTime.hrs,storedTime.min,storedTime.sec);
+            if (validateTime(atoi(tokens[1]),atoi(tokens[2]),atoi(tokens[3])))
+            {
+            storedTime.hrs  = atoi(tokens[1]);
+            storedTime.min  = atoi(tokens[2]);
+            storedTime.sec  = atoi(tokens[3]);
+            resetRTC();
+            sprintf(str,"this is it -> %d\n",HIB_RTCC_R);
             putsUart0(str);
+            }
+            else
+            {
+                sprintf(str, "Input time is wrong. Please ensure that the time is correct.\n");
+                putsUart0(str);
+            }
+        }
+        else if (isCommand("time",0)){
+            printTime(HIB_RTCC_R);
+
+        }
+        else if(isCommand("date",3))  // if the command is an rgb command
+        {
+            if (validateDate(atoi(tokens[1]),atoi(tokens[2]),atoi(tokens[3])))
+            {
+            storedDate.mth = atoi(tokens[1]);
+            storedDate.day = atoi(tokens[2]);
+            storedDate.yr = atoi(tokens[3]);
+            resetRTC();
+            }
+            else
+            {
+                sprintf(str, "Input date is wrong. Please ensure that the date is correct.\n");
+                putsUart0(str);
+            }
+        }
+        else if(isCommand("date",0)){
+            printDate(HIB_RTCC_R);
         }
 
         if(isCommand("reset",0)){
