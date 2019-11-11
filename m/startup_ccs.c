@@ -25,7 +25,8 @@
 #include <stdint.h>
 #include "hw_nvic.h"
 #include "hw_types.h"
-
+#include "RTC.h"
+#include "UART0.h"
 //*****************************************************************************
 //
 // Forward declaration of the default fault handlers.
@@ -59,7 +60,6 @@ extern uint32_t __STACK_TOP;
 //
 //*****************************************************************************
 
-extern void periodicIsr(void);              // Refer to TIMER1 handler in keyboard.c
 
 #pragma DATA_SECTION(g_pfnVectors, ".intvecs")
 void (* const g_pfnVectors[])(void) =
@@ -124,7 +124,7 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // CAN1
     IntDefaultHandler,                      // CAN2
     0,                                      // Reserved
-    IntDefaultHandler,                      // Hibernate
+    HibIsr,                                 // Hibernate
     IntDefaultHandler,                      // USB0
     IntDefaultHandler,                      // PWM Generator 3
     IntDefaultHandler,                      // uDMA Software Transfer

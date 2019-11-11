@@ -1,1 +1,1 @@
-"./main.obj" "./startup_ccs.obj" "../tm4c123gh6pm.cmd" -llibc.a 
+"./I2C0.obj" "./MPU.obj" "./RTC.obj" "./Temp.obj" "./UART0.obj" "./Utility.obj" "./main.obj" "./startup_ccs.obj" "../tm4c123gh6pm.cmd" -llibc.a 
