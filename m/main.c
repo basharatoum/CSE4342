@@ -70,7 +70,7 @@ void initHw()
     // Set GPIO ports to use APB (not needed since default configuration -- for clarity)
     // Note UART on port A must use APB
     SYSCTL_GPIOHBCTL_R = 0;
-    SYSCTL_RCGC2_R = 0;
+    SYSCTL_RCGC2_R = SYSCTL_RCGC2_GPIOF;
     // Enable clocks
     initUART0();
     initI2c0();

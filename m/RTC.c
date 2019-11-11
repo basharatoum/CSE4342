@@ -20,15 +20,15 @@ void startMatch(uint32_t T){
     while(!HIB_CTL_WRC&HIB_CTL_R);
 
     // set match value
-    HIB_RTCM0_R = T;
+    HIB_RTCM0_R = T+HIB_RTCC_R;
     while(!HIB_CTL_WRC&HIB_CTL_R);
 
     // interrupt mask for alarm
     HIB_IM_R = HIB_IM_RTCALT0;
     while(!HIB_CTL_WRC&HIB_CTL_R);
+
     HIB_CTL_R |= HIB_CTL_RTCEN;
     while(!HIB_CTL_WRC&HIB_CTL_R);
-
 }
 
 void HibIsr(void){
