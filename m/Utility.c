@@ -19,7 +19,7 @@ uint32_t asciiToUint32(const char str[])
     if (str[0] == '0' && tolower(str[1]) == 'x')
         sscanf(str, "%x", &data);
     else
-        sscanf(str, "%u", &data);
+        sscanf(str, "%d", &data);
     return data;
 }
 // utility function used for delta command, returns absolute value

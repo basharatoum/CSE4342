@@ -275,7 +275,6 @@ int main(void)
             putsUart0("read ADD REG\n");
             putsUart0("write ADD REG DATA\n");
         }
-
         else if(isCommand("temp",0)){
             uint32_t g = getTemp();
             sprintf(str, "%d\n", g);
@@ -295,12 +294,11 @@ int main(void)
             waitMicrosecond(3000000);
         }
         else if(isCommand("periodic",1)){
-            sprintf(str, "Starting\r\n");
+            sprintf(str, "Starting %d\r\n",HIB_RTCC_R);
             putsUart0(str);
             startMatch(asciiToUint32(tokens[1]));
-            sprintf(str, "Done\r\n");
+            sprintf(str, "Done %d\r\n",HIB_RTCM0_R);
             putsUart0(str);
-
         }
         // nullify the input string to take other inputs
         for(j =0;j<MAX_CHARS;++j)
