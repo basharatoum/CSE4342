@@ -43,20 +43,15 @@ char* tokens[10];
 uint8_t NArgs = 0;
 uint32_t RTC_Old=0;
 
-struct time{
-    uint16_t hrs;
-    uint16_t min;
-    uint16_t sec;
-};
-struct date{
-    uint16_t mth;
-    uint16_t day;
-    uint16_t yr;
-};
+uint32_t T;
+uint8_t NSamples=0;
 
 uint16_t daysOfEachMonth[12] = {31,28,31,30,31,30,31,31,30,31,30,31};
 struct time storedTime;
 struct date storedDate;
+uint8_t Para=-1,LTflag;
+float level,H=-1;
+uint8_t sleepflag;
 //-----------------------------------------------------------------------------
 // Subroutines
 //-----------------------------------------------------------------------------
@@ -70,7 +65,18 @@ void initHw()
     // Set GPIO ports to use APB (not needed since default configuration -- for clarity)
     // Note UART on port A must use APB
     SYSCTL_GPIOHBCTL_R = 0;
+
+    // intiate GPIOF_0
+
     SYSCTL_RCGC2_R = SYSCTL_RCGC2_GPIOF;
+    GPIO_PORTF_DIR_R = 0;
+    GPIO_PORTF_ICR_R=1;
+    GPIO_PORTF_PDR_R = 1;
+    GPIO_PORTF_IS_R =1;
+    GPIO_PORTF_IBE_R =0;
+    GPIO_PORTF_IM_R=1;
+    GPIO_PORTF_IEV_R = 1;
+
     // Enable clocks
     initUART0();
     initI2c0();
@@ -291,15 +297,33 @@ int main(void)
             readMagData(values);
             sprintf(str, "Mag data - > %d   %d   %d\r\n", values[0], values[1], values[2]);
             putsUart0(str);
-            waitMicrosecond(3000000);
         }
         else if(isCommand("periodic",1)){
-            sprintf(str, "Starting %d\r\n",HIB_RTCC_R);
-            putsUart0(str);
-            startMatch(asciiToUint32(tokens[1]));
-            sprintf(str, "Done %d\r\n",HIB_RTCM0_R);
-            putsUart0(str);
+            T = asciiToUint32(tokens[1]);
+            startMatch();
         }
+        else if(isCommand("samples",1)){
+            NSamples = asciiToUint8(tokens[1]);
+        }
+        else if(isCommand("trigger",0))
+        {
+            if(NSamples >0){
+            startTrigger();
+            }
+        }
+        else if (isCommand("gating",3)){
+            Para = asciiToUint8(tokens[1]);
+            LTflag = asciiToUint8(tokens[2]);
+            level = asciiToFloat(tokens[3]);
+        }
+        else if(isCommand("hyst",1))
+        {
+            H = asciiToFloat(tokens[1]);
+        }else if(isCommand("stop",0)){
+            endMatch();
+            stopTrigger();
+        }
+
         // nullify the input string to take other inputs
         for(j =0;j<MAX_CHARS;++j)
         {

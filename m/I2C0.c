@@ -96,3 +96,5 @@ bool isI2c0Error()
 {
     return !(I2C0_MCS_R & I2C_MCS_ERROR);
 }
+
+

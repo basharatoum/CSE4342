@@ -1,5 +1,7 @@
 #ifndef MPU_H_
 #define MPU_H_
+
+
 #include <stdint.h>
 #define MPU9250 0x68
 #define AK8963 0x0C
@@ -27,9 +29,13 @@
 #define AK8963_ZOUT_L 0x07
 #define AK8963_ZOUT_H 0x08
 #define AK8963_ST2 0x09  // Data overflow bit 3 and data read error status bit 2
+
+
 void initMPU9250();
 void readAccelData(int16_t * destination);
 void readGyroData(int16_t * destination);
 void readMagData(int16_t * destination);
+void startTrigger();
+void stopTrigger();
 
 #endif

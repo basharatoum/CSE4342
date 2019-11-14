@@ -27,6 +27,7 @@
 #include "hw_types.h"
 #include "RTC.h"
 #include "UART0.h"
+#include "Utility.h"
 //*****************************************************************************
 //
 // Forward declaration of the default fault handlers.
@@ -111,7 +112,7 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // Analog Comparator 2
     IntDefaultHandler,                      // System Control (PLL, OSC, BO)
     IntDefaultHandler,                      // FLASH Control
-    IntDefaultHandler,                      // GPIO Port F
+    MPUIsr,                                 // GPIO Port F
     IntDefaultHandler,                      // GPIO Port G
     IntDefaultHandler,                      // GPIO Port H
     IntDefaultHandler,                      // UART2 Rx and Tx

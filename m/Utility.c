@@ -1,6 +1,11 @@
 #include <stdint.h>
 #include "tm4c123gh6pm.h"
 #include "Utility.h"
+#include <stdio.h>
+#include "UART0.h"
+#include "MPU.h"
+#include <math.h>
+#include "Temp.h"
 
 uint8_t asciiToUint8(const char str[])
 {
@@ -9,6 +14,15 @@ uint8_t asciiToUint8(const char str[])
         sscanf(str, "%hhx", &data);
     else
         sscanf(str, "%hhu", &data);
+    return data;
+}
+float asciiToFloat(const char str[])
+{
+    float data;
+    if (str[0] == '0' && tolower(str[1]) == 'x')
+        sscanf(str, "%x", &data);
+    else
+        sscanf(str, "%f", &data);
     return data;
 }
 
@@ -69,3 +83,37 @@ int validateDate(uint16_t mth,uint16_t day,uint16_t yr){
         }
     return 0;
 }
+
+
+
+float eucDis(uint16_t x,uint16_t y,uint16_t z){
+    return sqrt(x*x+y*y+z*z);
+}
+
+void MPUIsr(){
+    GPIO_PORTF_ICR_R=1;
+    char str[60];
+    if(NSamples>0){
+        sprintf(str, "Data %d\r\n", NSamples);
+        putsUart0(str);
+        int16_t values[3];
+        readAccelData(values);
+        sprintf(str, "Accel data - > %d   %d   %d\r\n", values[0], values[1], values[2]);
+        putsUart0(str);
+        readGyroData(values);
+        sprintf(str, "Gyro data - > %d   %d   %d\r\n", values[0], values[1], values[2]);
+        putsUart0(str);
+        readMagData(values);
+        sprintf(str, "Mag data - > %d   %d   %d\r\n", values[0], values[1], values[2]);
+        putsUart0(str);
+        NSamples-=1;
+    }else{
+        putsUart0(str);
+        stopTrigger();
+    }
+
+   readI2c0Register(MPU9250, 0x3A);
+}
+
+
+

@@ -1,8 +1,9 @@
 #include "MPU.h"
 #include "I2C0.h"
-
+#include "tm4c123gh6pm.h"
+#include "Utility.h"
 void initMPU9250(){
-    writeI2c0Register(MPU9250,0x37,0x02);
+    writeI2c0Register(MPU9250,0x37,0x22);
     // Turn on all the sensors;
     writeI2c0Register(MPU9250,PWR_MGMT_1,0x00);
     // full scale Gyro config;
@@ -10,6 +11,7 @@ void initMPU9250(){
     // full scale accel config;
     writeI2c0Register(MPU9250,ACCEL_CONFIG,0x18);
     writeI2c0Register(AK8963,0x0A,0x06);
+
 }
 
 
@@ -73,4 +75,19 @@ void readMagData(int16_t * destination){
     destination[0] = ((int16_t)rawData[1] << 8) | rawData[0] ;
     destination[1] = ((int16_t)rawData[3] << 8) | rawData[2] ;
     destination[2] = ((int16_t)rawData[5] << 8) | rawData[4] ;
+}
+
+void startTrigger(){
+    NVIC_EN0_R |= 1<<(INT_GPIOF-16);
+    waitMicrosecond(10000);
+
+    writeI2c0Register(MPU9250,0x38,0x01);
+
+
+}
+
+void stopTrigger(){
+    NVIC_EN0_R &= ~(1<<(INT_GPIOF-16));
+    writeI2c0Register(MPU9250,0x38,0x00);
+
 }
