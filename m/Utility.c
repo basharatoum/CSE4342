@@ -44,6 +44,11 @@ int32_t abs(int32_t a)
     return a;
 }
 
+float absfloat(float a){
+    if (a<0.0)
+        return -1*a;
+    return a;
+}
 // function to wait for a period of time
 void waitMicrosecond(uint32_t us)
 {
@@ -86,34 +91,156 @@ int validateDate(uint16_t mth,uint16_t day,uint16_t yr){
 
 
 
-float eucDis(uint16_t x,uint16_t y,uint16_t z){
+float eucDis(int16_t x,int16_t y,int16_t z){
     return sqrt(x*x+y*y+z*z);
 }
 
-void MPUIsr(){
-    GPIO_PORTF_ICR_R=1;
+void Sample(){
+    int16_t values[3];
     char str[60];
+    readAccelData(values);
+    sprintf(str, "Accel data - > %d   %d   %d\r\n", values[0], values[1], values[2]);
+    putsUart0(str);
+    readGyroData(values);
+    sprintf(str, "Gyro data - > %d   %d   %d\r\n", values[0], values[1], values[2]);
+    putsUart0(str);
+    readMagData(values);
+    sprintf(str, "Mag data - > %d   %d   %d\r\n", values[0], values[1], values[2]);
+    putsUart0(str);
+    NSamples-=1;
+}
+void SampleWrapper(){
+    int16_t values[3];
+
     if(NSamples>0){
-        sprintf(str, "Data %d\r\n", NSamples);
-        putsUart0(str);
-        int16_t values[3];
-        readAccelData(values);
-        sprintf(str, "Accel data - > %d   %d   %d\r\n", values[0], values[1], values[2]);
-        putsUart0(str);
-        readGyroData(values);
-        sprintf(str, "Gyro data - > %d   %d   %d\r\n", values[0], values[1], values[2]);
-        putsUart0(str);
-        readMagData(values);
-        sprintf(str, "Mag data - > %d   %d   %d\r\n", values[0], values[1], values[2]);
-        putsUart0(str);
-        NSamples-=1;
-    }else{
-        putsUart0(str);
+            if (Para == 4){
+                    Sample();
+            }else{
+                // Accel
+                if(Para == 0){
+                    readAccelData(values);
+                    if(absfloat(eucDis(values[0],values[1],values[2])-level)>=H)
+                    if(LTflag==0){
+                         if(eucDis(values[0],values[1],values[2])>=level&&Hflag ==0){
+                             Sample();
+                             if(H>0.0){
+                                 Hflag=1;
+                             }
+                         }else if(Hflag ==1){
+                             Hflag = 0;
+                         }
+                    }else if(LTflag==1){
+                         if(eucDis(values[0],values[1],values[2])<level&&Hflag ==0){
+                             Sample();
+                             if(H>0){
+                                 Hflag=1;
+                             }
+                         }else if(Hflag ==1){
+                             Hflag = 0;
+                         }
+                    }
+                }else if(Para == 1){
+                    // Gyroscope
+                    readGyroData(values);
+                    if(absfloat(eucDis(values[0],values[1],values[2])-level)>=H)
+                    if(LTflag==0){
+                         if(eucDis(values[0],values[1],values[2])>=level&&Hflag ==0){
+                             Sample();
+                             if(H!=0){
+                                 Hflag=1;
+                             }
+                         }else if(Hflag ==1){
+                             Hflag = 0;
+                         }
+                    }else if(LTflag==1){
+                         if(eucDis(values[0],values[1],values[2])<level&&Hflag ==0){
+                             Sample();
+                             if(H>0){
+                                 Hflag=1;
+                             }
+                         }else if(Hflag ==1){
+                             Hflag = 0;
+                         }
+                    }
+                }else if(Para == 2){
+                    // Magenatic
+                    readMagData(values);
+                    if(absfloat(eucDis(values[0],values[1],values[2])-level)>=H&&Hflag==0)
+                    if(LTflag==0){
+                         if(eucDis(values[0],values[1],values[2])>=level&&Hflag ==0){
+                             Sample();
+                             if(H>0){
+                                 Hflag=1;
+                             }
+                         }else if(Hflag ==1){
+                             Hflag = 0;
+                         }
+                    }else if(LTflag==1){
+                         if(eucDis(values[0],values[1],values[2])<level&&Hflag ==0){
+                             Sample();
+                             if(H>0){
+                                 Hflag=1;
+                             }
+                         }else if(Hflag ==1){
+                             Hflag = 0;
+                         }
+                    }
+                }
+                else if(Para == 3){
+                    // Temperature
+                    uint32_t Temp = getTemp();
+                    if(absfloat(Temp-level)>=H)
+                    if(LTflag==0){
+                         if(Temp>=level&&Hflag==0){
+                             Sample();
+                             if(H!=0){
+                                 Hflag=1;
+                             }
+                         }else if(Hflag ==1){
+                             Hflag = 0;
+                         }
+                    }else if(LTflag==1){
+                         if(Temp<level&&Hflag==0){
+                             Sample();
+                             if(H!=0){
+                                 Hflag=1;
+                             }
+                         }else if(Hflag ==1){
+                             Hflag = 0;
+                         }
+                    }
+                }
+
+            }
+        }
+
+}
+
+void MPUIsr(){
+    GPIO_PORTF_ICR_R |= 0x01;
+    SampleWrapper();
+    if(NSamples <=0){
         stopTrigger();
     }
-
+   // read int_status  to clear interrupt
    readI2c0Register(MPU9250, 0x3A);
 }
 
+int validateInput(){
+    if(Para <0||Para>4){
+        return 0;
+    }else if(Para>=0 && Para <=3){
+        if(level <0){
+            return 0;
+        }
+        if(LTflag>1||LTflag<0){
+            return 0;
+        }
+    }
 
+    if (T<=0){
+        return 0;
+    }
+    return 1;
+}
 

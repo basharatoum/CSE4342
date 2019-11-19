@@ -49,8 +49,8 @@ uint8_t NSamples=0;
 uint16_t daysOfEachMonth[12] = {31,28,31,30,31,30,31,31,30,31,30,31};
 struct time storedTime;
 struct date storedDate;
-uint8_t Para=-1,LTflag;
-float level,H=-1;
+uint8_t Para=4,LTflag,Hflag=0;
+float level,H=0;
 uint8_t sleepflag;
 //-----------------------------------------------------------------------------
 // Subroutines
@@ -69,13 +69,9 @@ void initHw()
     // intiate GPIOF_0
 
     SYSCTL_RCGC2_R = SYSCTL_RCGC2_GPIOF;
-    GPIO_PORTF_DIR_R = 0;
-    GPIO_PORTF_ICR_R=1;
-    GPIO_PORTF_PDR_R = 1;
-    GPIO_PORTF_IS_R =1;
-    GPIO_PORTF_IBE_R =0;
-    GPIO_PORTF_IM_R=1;
-    GPIO_PORTF_IEV_R = 1;
+
+
+
 
     // Enable clocks
     initUART0();
@@ -300,25 +296,41 @@ int main(void)
         }
         else if(isCommand("periodic",1)){
             T = asciiToUint32(tokens[1]);
-            startMatch();
+            if(NSamples >0 && validateInput()){
+                startMatch();
+            }else{
+                sprintf(str, "Please check all the input parameters are correct!\r\n");
+                putsUart0(str);
+            }
+
         }
         else if(isCommand("samples",1)){
             NSamples = asciiToUint8(tokens[1]);
+            sprintf(str, "# of Samples parameter: %d \r\n",NSamples);
+            putsUart0(str);
         }
         else if(isCommand("trigger",0))
         {
-            if(NSamples >0){
-            startTrigger();
+            if(NSamples >0 && validateInput()){
+                startTrigger();
+            }else{
+                sprintf(str, "Please check all the input parameters are correct!\r\n");
+                putsUart0(str);
             }
         }
         else if (isCommand("gating",3)){
             Para = asciiToUint8(tokens[1]);
             LTflag = asciiToUint8(tokens[2]);
             level = asciiToFloat(tokens[3]);
+            sprintf(str, "Gating parameters: %d %d %f\r\n",Para,LTflag,level);
+            putsUart0(str);
         }
         else if(isCommand("hyst",1))
         {
+            Hflag = 0;
             H = asciiToFloat(tokens[1]);
+            sprintf(str, "Hysterisis parameter: %f \r\n",H);
+            putsUart0(str);
         }else if(isCommand("stop",0)){
             endMatch();
             stopTrigger();

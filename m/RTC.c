@@ -6,6 +6,7 @@
 #include "Utility.h"
 #include "MPU.h"
 
+//periodic temperature
 
 void initRTC(){
     // Configure RTC
@@ -71,27 +72,11 @@ void HibIsr(){
 
     if (status & HIB_MIS_RTCALT0)
     {
-        if(NSamples > 0){
-            sprintf(str, "Data %d\r\n", NSamples);
-            putsUart0(str);
-            int16_t values[3];
-            readAccelData(values);
-            sprintf(str, "Accel data - > %d   %d   %d\r\n", values[0], values[1], values[2]);
-            putsUart0(str);
-            readGyroData(values);
-            sprintf(str, "Gyro data - > %d   %d   %d\r\n", values[0], values[1], values[2]);
-            putsUart0(str);
-            readMagData(values);
-            sprintf(str, "Mag data - > %d   %d   %d\r\n", values[0], values[1], values[2]);
-            putsUart0(str);
-            NSamples--;
-            sprintf(str, "*********\r\n");
-            putsUart0(str);
-            startMatch();
-        }else {
+        SampleWrapper();
+        startMatch();
+        if(NSamples <=0){
             endMatch();
         }
-
     }
 
 

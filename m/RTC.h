@@ -8,5 +8,4 @@ void HibIsr();
 void endMatch();
 extern uint32_t T;
 extern uint8_t NSamples;
-
 #endif
