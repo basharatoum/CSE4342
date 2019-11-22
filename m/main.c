@@ -42,8 +42,8 @@ char* tokens[10];
 // this is used to store the number of arguments
 uint8_t NArgs = 0;
 uint32_t RTC_Old=0;
-
-uint32_t T;
+uint32_t state,startingState;
+uint32_t T=1;
 uint8_t NSamples=0;
 
 uint16_t daysOfEachMonth[12] = {31,28,31,30,31,30,31,31,30,31,30,31};
@@ -51,6 +51,7 @@ struct time storedTime;
 struct date storedDate;
 uint8_t Para=4,LTflag,Hflag=0;
 float level,H=0;
+uint8_t logMask=0;
 uint8_t sleepflag;
 //-----------------------------------------------------------------------------
 // Subroutines
@@ -180,7 +181,7 @@ void printDate(uint32_t RTC){
     putsUart0(str);
 }
 int main(void)
-{
+ {
     // Initialize hardware
     initHw();
     int16_t i = 0,j;
@@ -319,13 +320,16 @@ int main(void)
             }
         }
         else if (isCommand("gating",3)){
-            Para = asciiToUint8(tokens[1]);
-            LTflag = asciiToUint8(tokens[2]);
-            level = asciiToFloat(tokens[3]);
+
+            SetGating();
             sprintf(str, "Gating parameters: %d %d %f\r\n",Para,LTflag,level);
             putsUart0(str);
         }
-        else if(isCommand("hyst",1))
+        else if(isCommand("log",1)){
+            setLogging();
+            sprintf(str, "Logging mask: %d \r\n",logMask);
+            putsUart0(str);
+        }else if(isCommand("hyst",1))
         {
             Hflag = 0;
             H = asciiToFloat(tokens[1]);
@@ -334,6 +338,12 @@ int main(void)
         }else if(isCommand("stop",0)){
             endMatch();
             stopTrigger();
+        }else if(isCommand("state",1)){
+            state = asciiToUint32(tokens[1]);
+        }else if(isCommand("next",0)){
+            nextPage();
+            sprintf(str, "next parameter: %u pp\t %d \r\n",state,state);
+            putsUart0(str);
         }
 
         // nullify the input string to take other inputs

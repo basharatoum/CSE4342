@@ -7,6 +7,7 @@
 #include <math.h>
 #include "Temp.h"
 
+
 uint8_t asciiToUint8(const char str[])
 {
     uint8_t data;
@@ -244,3 +245,45 @@ int validateInput(){
     return 1;
 }
 
+void SetGating(){
+    if(strcmp(tokens[1],"accel")==0){
+        Para = 0;
+    }else if(strcmp(tokens[1],"gyro")==0){
+        Para = 1;
+    }else if(strcmp(tokens[1],"magen")==0){
+        Para = 2;
+    }else if(strcmp(tokens[1],"temp")==0){
+        Para = 3;
+    }else{
+        Para = 5;
+    }
+
+    if(strcmp(tokens[2],"<")==0){
+            LTflag = 0;
+    }else if(strcmp(tokens[2],">")==0){
+            LTflag= 1;
+    }
+
+    level = asciiToFloat(tokens[3]);
+}
+
+void setLogging(){
+    if(strcmp(tokens[1],"accel")==0){
+        logMask|=0x01;
+    }else if(strcmp(tokens[1],"gyro")==0){
+        logMask|=0x02;
+    }else if(strcmp(tokens[1],"magen")==0){
+        logMask|=0x04;
+    }else if(strcmp(tokens[1],"temp")==0){
+        logMask|=0x08;
+    }else if(strcmp(tokens[1],"remove")==0){
+        logMask=0x00;
+    }
+}
+
+
+uint32_t nextPage(){
+    state = state>>1;
+    state |= ((state & 1)^((state & 2)>>1))<<31;
+    return state;
+}

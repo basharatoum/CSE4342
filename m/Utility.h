@@ -14,6 +14,9 @@ float eucDis(int16_t x,int16_t y,int16_t z);
 int validateInput();
 void SampleWrapper();
 float absfloat(float a);
+void SetGating();
+void setLogging();
+uint32_t nextPage();
 struct time{
     uint16_t hrs;
     uint16_t min;
@@ -31,4 +34,7 @@ extern uint8_t sleepflag;
 extern struct time storedTime;
 extern struct date storedDate;
 extern uint32_t T;
+extern char* tokens[10];
+extern uint8_t logMask;
+extern uint32_t state,startingState;
 #endif
