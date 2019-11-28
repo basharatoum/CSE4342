@@ -97,6 +97,7 @@ float eucDis(int16_t x,int16_t y,int16_t z){
 }
 
 void Sample(){
+    if(!logMask){
     int16_t values[3];
     char str[60];
     readAccelData(values);
@@ -109,7 +110,49 @@ void Sample(){
     sprintf(str, "Mag data - > %d   %d   %d\r\n", values[0], values[1], values[2]);
     putsUart0(str);
     NSamples-=1;
+    }else{
+        int32_t values[3];
+        int16_t temps[3];
+        uint32_t size=0;
+        uint8_t i =0;
+        if(logMask & 0x01)
+        {
+            readAccelData(temps);
+            for(i=0;i<3;++i){
+                values[i] = temps[i];
+            }
+            size = 3;
+            writeFlash(values,size);
+        }
+        if(logMask&0x02)
+        {
+            readGyroData(values);
+            for(i=0;i<3;++i){
+                values[i] = temps[i];
+            }
+            size = 3;
+            writeFlash(values,size);
+
+        }
+        if(logMask&0x04)
+        {
+            readMagData(values);
+            for(i=0;i<3;++i){
+                values[i] = temps[i];
+            }
+            size = 3;
+            writeFlash(values,size);
+        }
+        if(logMask&0x08)
+        {
+            values[0] = getTemp();
+            size = 1;
+            writeFlash(values,size);
+        }
+        NSamples-=1;
+    }
 }
+
 void SampleWrapper(){
     int16_t values[3];
 
@@ -281,9 +324,102 @@ void setLogging(){
     }
 }
 
+void eraseFlash(uint32_t add){
+    FLASH_FMA_R = add;
+    char str[60];
+    FLASH_FMC_R = FLASH_FMC_WRKEY | FLASH_FMC_ERASE;
+    sprintf(str, "State is: %d \r\n",state);
+    putsUart0(str);
+    while(FLASH_FMC_R & FLASH_FMC_ERASE);
+    sprintf(str, "State is: %d \r\n",state);
+    putsUart0(str);
+}
 
-uint32_t nextPage(){
-    state = state>>1;
-    state |= ((state & 1)^((state & 2)>>1))<<31;
-    return state;
+void writeFlash(int32_t data[],uint32_t size){
+    uint32_t add = (state&0x3FC00)|(currOffset);
+    uint32_t k = 0;
+    char str[60];
+    while(size>0){
+        FLASH_FMA_R = add;
+        FLASH_FMD_R = data[k];
+        FLASH_FMC_R = FLASH_FMC_WRKEY | FLASH_FMC_WRITE;
+        while(FLASH_FMC_R & FLASH_FMC_WRITE);
+        add+=sizeof(int32_t);
+        if(add>=(state&0x3FC00)+1024){
+            add=nextPage()&0x3FC00;
+            eraseFlash(add);
+        }
+        size-=1;
+        k+=1;
+    }
+    currOffset = add & 0x03FF;
+}
+
+uint32_t nextPage()
+{
+ do{
+  state>>=2;
+  uint16_t bit;
+  bit  = ((state >> 2) ^(state >> 6) ^(state >> 7) ^ (state >> 8) ^ (state >> 10) ^ (state >> 15) ) & 1;
+  state =  (state >> 1) | (bit << 15);
+  state<<=2;
+ }while(state<0x010000);
+
+ return state;
+}
+
+void readFlash(int32_t* data,uint32_t size){
+    uint32_t add = (state&0x3FC00)|(currOffset);
+    uint32_t k = 0;
+    while(size>0){
+        data[k]=*((int32_t*)(add));
+        add+=sizeof(int32_t);
+        if(add>=(state&0x3FC00)+1024){
+            add=nextPage()&0x3FC00;
+        }
+        k+=1;
+        size-=1;
+    }
+    currOffset = add & 0x03FF;
+}
+void printData(){
+    uint32_t currState = state;
+    uint32_t offset = currOffset;
+    state = startingState;
+    currOffset = 0x0000;
+    char str[60];
+    uint32_t i=0;
+    while(state!=currState||currOffset!=offset){
+        int32_t values[3];
+        sprintf(str, "DATA: %d\r\n", i);
+        putsUart0(str);
+        i++;
+        if(logMask & 0x01)
+        {
+            readFlash(values,3);
+            sprintf(str, "Accel data - > %d   %d   %d\r\n", values[0], values[1], values[2]);
+            putsUart0(str);
+        }
+        if(logMask&0x02)
+        {
+            readFlash(values,3);
+            sprintf(str, "Gyro data - > %d   %d   %d\r\n", values[0], values[1], values[2]);
+            putsUart0(str);
+        }
+        if(logMask&0x04)
+        {
+            readFlash(values,3);
+            sprintf(str, "Compass data - > %d   %d   %d\r\n", values[0], values[1], values[2]);
+            putsUart0(str);
+        }
+        if(logMask&0x08)
+        {
+            readFlash(values,1);
+            sprintf(str, "temprature data - > %d\r\n", (uint32_t) values[0]);
+            putsUart0(str);
+        }
+    }
+    state = currState;
+    currOffset = offset;
+    return;
 }

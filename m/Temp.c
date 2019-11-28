@@ -17,11 +17,32 @@ void initTemp(){
 
     ADC0_SSCTL3_R |= 0x0A;       /* take chip temperature, set flag at 1st sample */
     ADC0_ACTSS_R |= 8;           /* enable ADC0 sequencer 3 */
+
 }
-uint32_t getTemp(){
-    uint32_t temperature;
+
+int32_t getTemp(){
+    int32_t temperature;
     ADC0_PSSI_R |=ADC_PSSI_SS3;
     while(ADC0_ACTSS_R&ADC_ACTSS_BUSY);                    /* wait for conversion complete */
       temperature = 147 - (247 * ADC0_SSFIFO3_R) / 4096;
       return temperature;
+}
+uint16_t getRandomStart()
+{
+    uint32_t start = 0;
+    uint16_t temp = 0;
+    uint8_t i=0;
+    for(i=0;i<16;i++)
+    {
+        ADC0_PSSI_R |=ADC_PSSI_SS3;
+        while(ADC0_ACTSS_R&ADC_ACTSS_BUSY);/* wait for conversion complete */
+        temp = ADC0_SSFIFO3_R;
+        if(i%2==0){
+        start |= (temp & 0x01)<<i;
+        }else{
+        start |= (~temp & 0x01)<<i;
+        }
+        waitMicrosecond(1000);
+    }
+    return (uint16_t)(start&0x0000FFFF);
 }

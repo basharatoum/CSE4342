@@ -66,7 +66,6 @@ void endMatch(){
 
 
 void HibIsr(){
-    char str[60];
     uint32_t status = HIB_MIS_R;
     while (!(HIB_CTL_R & HIB_CTL_WRC));
 

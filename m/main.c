@@ -42,7 +42,8 @@ char* tokens[10];
 // this is used to store the number of arguments
 uint8_t NArgs = 0;
 uint32_t RTC_Old=0;
-uint32_t state,startingState;
+uint16_t currPage;
+uint32_t state=0,startingState=0;
 uint32_t T=1;
 uint8_t NSamples=0;
 
@@ -53,6 +54,7 @@ uint8_t Para=4,LTflag,Hflag=0;
 float level,H=0;
 uint8_t logMask=0;
 uint8_t sleepflag;
+uint16_t currOffset;
 //-----------------------------------------------------------------------------
 // Subroutines
 //-----------------------------------------------------------------------------
@@ -338,12 +340,29 @@ int main(void)
         }else if(isCommand("stop",0)){
             endMatch();
             stopTrigger();
-        }else if(isCommand("state",1)){
-            state = asciiToUint32(tokens[1]);
+        }else if(isCommand("state",0)){
+            state = (getRandomStart()<<2)|(0x010000);                    //asciiToUint32(tokens[1]);
+            sprintf(str, "State is: %d \r\n",state);
+            putsUart0(str);
+            startingState = state;
+            currOffset = 0x0000;
+            eraseFlash(state&0x3FC00);
         }else if(isCommand("next",0)){
             nextPage();
             sprintf(str, "next parameter: %u pp\t %d \r\n",state,state);
             putsUart0(str);
+        }else if(isCommand("data",0)){
+            printData();
+        }else if(isCommand("states",1)){
+            state = asciiToUint32(tokens[1]);
+            sprintf(str, "State is: %d \r\n",state);
+            putsUart0(str);
+            startingState = state;
+            currOffset = 0x0000;
+            eraseFlash(state&0x3FC00);
+        }else if(isCommand("sampless",0)){
+            sprintf(str, "# of Samples parameter: %d \r\n",NSamples);
+                       putsUart0(str);
         }
 
         // nullify the input string to take other inputs

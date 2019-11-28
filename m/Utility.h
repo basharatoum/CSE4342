@@ -16,6 +16,9 @@ void SampleWrapper();
 float absfloat(float a);
 void SetGating();
 void setLogging();
+void writeFlash(int32_t data[],uint32_t size);
+void eraseFlash(uint32_t add);
+void printData();
 uint32_t nextPage();
 struct time{
     uint16_t hrs;
@@ -27,6 +30,7 @@ struct date{
     uint16_t day;
     uint16_t yr;
 };
+extern uint16_t currOffset;
 extern uint8_t NSamples;
 extern uint8_t Para,LTflag,Hflag;
 extern float level,H;

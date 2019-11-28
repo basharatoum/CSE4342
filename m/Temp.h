@@ -2,5 +2,6 @@
 #define TEMP_H_
 #include <stdint.h>
 void initTemp();
-uint32_t getTemp();
+int32_t getTemp();
+uint16_t getRandomStart();
 #endif
