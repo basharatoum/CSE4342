@@ -224,13 +224,16 @@ void retrieveData(){
 
 void startRTC(){
     if(logMask&0x20){
-        HIB_CTL_R = HIB_CTL_CLK32EN|HIB_CTL_RTCEN;
-        waitMicrosecond(1000);
 
+        HIB_CTL_R = HIB_CTL_CLK32EN|HIB_CTL_RTCEN;
         while(!HIB_CTL_WRC&HIB_CTL_R);
 
-        HIB_CTL_R = HIB_CTL_CLK32EN | HIB_CTL_RTCEN|HIB_CTL_RTCWEN|HIB_CTL_PINWEN|HIB_CTL_HIBREQ|HIB_CTL_VDD3ON;
-        while(1){
+        HIB_CTL_R = HIB_CTL_CLK32EN | HIB_CTL_RTCEN|HIB_CTL_RTCWEN|HIB_CTL_PINWEN|HIB_CTL_VDD3ON;
+        while (!(HIB_CTL_R & HIB_CTL_WRC));
+        HIB_CTL_R|=HIB_CTL_HIBREQ;
+        while (!(HIB_CTL_R & HIB_CTL_WRC));
+        while(1)
+        {
 
         }
     }
@@ -244,9 +247,12 @@ void HibIsr(){
     char str[60];
     uint32_t status = HIB_MIS_R;
 
-    while (!(HIB_CTL_R & HIB_CTL_WRC));
+
     if (status & HIB_MIS_RTCALT0==0x01)
     {
+        HIB_IC_R |= status;
+        while (!(HIB_CTL_R & HIB_CTL_WRC));
+
         retrieveData();
         if(logMask&0x20){
         initTemp();
@@ -260,32 +266,29 @@ void HibIsr(){
             endMatch();
         }
     }else if(status&HIB_MIS_EXTW){
+        HIB_IC_R |= status;
+        while (!(HIB_CTL_R & HIB_CTL_WRC));
 
         retrieveData();
+
+        readI2c0Register(MPU9250, 0x3A);
 
         if(logMask&0x20){
         initTemp();
         }
-        sprintf(str, "Trigflag - > %d   %d \r\n", Trigflag,NSamples);
-        putsUart0(str);
-        if(Trigflag ==1&&NSamples>0){
 
-        SampleWrapper();
-        }else if(Trigflag ==1&&NSamples<=0){
-        Trigflag = 0;
-        logMask = 0x00;
-        }
-        storeData();
 
-        startRTC();
+
     }
-    HIB_IC_R |= status;
-    while (!(HIB_CTL_R & HIB_CTL_WRC));
 }
 void HibSleep(){
     logMask|=0x20;
     storeData();
-    HIB_CTL_R = HIB_CTL_CLK32EN | HIB_CTL_RTCEN|HIB_CTL_RTCWEN|HIB_CTL_PINWEN|HIB_CTL_HIBREQ|HIB_CTL_VDD3ON;
+    HIB_IM_R |= HIB_IM_EXTW;
+
+    HIB_CTL_R = HIB_CTL_CLK32EN | HIB_CTL_RTCEN|HIB_CTL_RTCWEN|HIB_CTL_PINWEN|HIB_CTL_VDD3ON;
+    while (!(HIB_CTL_R & HIB_CTL_WRC));
+    HIB_CTL_R|=HIB_CTL_HIBREQ;
     while (!(HIB_CTL_R & HIB_CTL_WRC));
     while(1)
     {

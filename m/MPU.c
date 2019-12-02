@@ -134,15 +134,17 @@ void startTrigger(){
     SYSCTL_RCGC2_R = SYSCTL_RCGC2_GPIOF;
     waitMicrosecond(10000);
 
-    GPIO_PORTF_DEN_R|=1;
-    GPIO_PORTF_DIR_R&=~(0x01);
 
     GPIO_PORTF_LOCK_R = 0x4C4F434B;
-    GPIO_PORTF_CR_R|=0x01;
+
+
+    GPIO_PORTF_DEN_R|=1;
+    GPIO_PORTF_DIR_R&=~(0x01);
     GPIO_PORTF_AFSEL_R = 0;
+    GPIO_PORTF_CR_R|=0x01;
 
     GPIO_PORTF_PUR_R|=1;
-    GPIO_PORTF_IS_R|=(0x01);
+    GPIO_PORTF_IS_R&=~(0x01);
     GPIO_PORTF_IBE_R&=~(0x01);
     GPIO_PORTF_IEV_R &=~0x01;
     GPIO_PORTF_ICR_R |= 0x01;
@@ -155,7 +157,11 @@ void startTrigger(){
 }
 
 void stopTrigger(){
+    GPIO_PORTF_LOCK_R = 0x4C4F434B;
+    GPIO_PORTF_CR_R|=0x01;
     GPIO_PORTF_IM_R&=~0x01;
+    GPIO_PORTF_LOCK_R = 0;
+
     writeI2c0Register(MPU9250,0x38,0x00);
     writeI2c0Register(MPU9250,PWR_MGMT_1,0x00);
 

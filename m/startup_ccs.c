@@ -21,7 +21,7 @@
 // This is part of revision 1.1 of the EK-TM4C123GXL Firmware Package.
 //
 //*****************************************************************************
-
+#include <stdio.h>
 #include <stdint.h>
 #include "hw_nvic.h"
 #include "hw_types.h"
@@ -254,6 +254,9 @@ ResetISR(void)
 static void
 NmiSR(void)
 {
+    char str[60];
+    sprintf(str, "NMI is called. \r\n");
+    putsUart0(str);
     //
     // Enter an infinite loop.
     //

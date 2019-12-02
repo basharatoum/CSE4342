@@ -266,10 +266,11 @@ void SampleWrapper(){
 
 void MPUIsr(){
     char str[60];
-
     // read int_status  to clear interrupt
    uint8_t stat = readI2c0Register(MPU9250, 0x3A);
-   sprintf(str, "stat %d\r\n", stat&0x59);
+   uint32_t status = HIB_MIS_R;
+   sprintf(str, "status %d\r\n", status);
+   putsUart0(str);
     retrieveData();
 
     SampleWrapper();
@@ -277,8 +278,14 @@ void MPUIsr(){
         stopTrigger();
     }
     storeData();
-
-   putsUart0(str);
+    if(Trigflag ==1&&NSamples<=0&&logMask&0x20){
+         Trigflag=0;
+         stopTrigger();
+         storeData();
+         HIB_IM_R &=~ HIB_IM_EXTW;
+         while(!(HIB_CTL_WRC&HIB_CTL_R));
+         startRTC();
+    }
 
    waitMicrosecond(100);
 

@@ -186,11 +186,12 @@ void printDate(uint32_t RTC){
 int main(void)
  {
     initHw();
+    char str[60];       // str is used to be able to print the raw value to
+                       // the UART
     // Initialize hardware
     int16_t i = 0,j;
     uint8_t add,reg,data;
-    char str[60];       // str is used to be able to print the raw value to
-                       // the UART
+
     storedDate.day = 3;
     storedDate.mth = 10;
     storedDate.yr = 2019;
@@ -395,4 +396,5 @@ int main(void)
         }
 
     }
+
 }
