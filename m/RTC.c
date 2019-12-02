@@ -206,8 +206,8 @@ void retrieveData(){
             break;
         case 12:
             logMask = 0x3F & HWREG(0x400FC030 + (i*4));
-            LTflag = (0x40&HWREG(0x400FC030 + (i*4)))>>6;
-            Hflag = (0x80&HWREG(0x400FC030 + (i*4)))>>7;
+            LTflag = (0x040&HWREG(0x400FC030 + (i*4)))>>6;
+            Hflag = (0x080&HWREG(0x400FC030 + (i*4)))>>7;
             Trigflag = (0x100&HWREG(0x400FC030 + (i*4)))>>8;
             break;
         case 13:
@@ -241,6 +241,7 @@ void stopRTC(){
     while(!(HIB_CTL_WRC&HIB_CTL_R));
 }
 void HibIsr(){
+    char str[60];
     uint32_t status = HIB_MIS_R;
 
     while (!(HIB_CTL_R & HIB_CTL_WRC));
@@ -265,8 +266,10 @@ void HibIsr(){
         if(logMask&0x20){
         initTemp();
         }
-
+        sprintf(str, "Trigflag - > %d   %d \r\n", Trigflag,NSamples);
+        putsUart0(str);
         if(Trigflag ==1&&NSamples>0){
+
         SampleWrapper();
         }else if(Trigflag ==1&&NSamples<=0){
         Trigflag = 0;
@@ -284,7 +287,8 @@ void HibSleep(){
     storeData();
     HIB_CTL_R = HIB_CTL_CLK32EN | HIB_CTL_RTCEN|HIB_CTL_RTCWEN|HIB_CTL_PINWEN|HIB_CTL_HIBREQ|HIB_CTL_VDD3ON;
     while (!(HIB_CTL_R & HIB_CTL_WRC));
-    while(1){
+    while(1)
+    {
 
     }
 }

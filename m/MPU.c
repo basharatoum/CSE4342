@@ -97,8 +97,8 @@ void startTrigger(){
     // set up wake on motion
 
     c =     readI2c0Register(MPU9250, 0x37);
-    c |=0x20;
-    c &=~0x82;
+    c |=0xA0;
+    c &=~0x02;
     writeI2c0Register(MPU9250,0x37,c);
 
     c =     readI2c0Register(MPU9250, PWR_MGMT_1+1);
@@ -121,10 +121,10 @@ void startTrigger(){
     writeI2c0Register(MPU9250,MOT_DETECT_CTRL,c);
 
 
-    writeI2c0Register(MPU9250,ACCEL_CONFIG2+2,0xFF);
+    writeI2c0Register(MPU9250,ACCEL_CONFIG2+2,0x0F);
 
     c = readI2c0Register(MPU9250, ACCEL_CONFIG2+1);
-    c &= ~0x0F;
+    c &= ~0x08;
     writeI2c0Register(MPU9250,ACCEL_CONFIG2+1,c);
 
     writeI2c0Register(MPU9250,PWR_MGMT_1,0x01<<5);
@@ -135,9 +135,11 @@ void startTrigger(){
     GPIO_PORTF_DIR_R&=~(0x01);
     GPIO_PORTF_DEN_R|=1;
     GPIO_PORTF_PUR_R|=1;
-    GPIO_PORTF_IS_R|=(0x01);
+    GPIO_PORTF_IS_R&=(0x01);
     GPIO_PORTF_IBE_R&=~(0x01);
     GPIO_PORTF_IEV_R &= ~0x01;
+    waitMicrosecond(10000);
+
     NVIC_EN0_R |= 1<<(INT_GPIOF-16);
     GPIO_PORTF_IM_R|=0x01;
     NVIC_EN0_R |= 1<<(INT_GPIOF-16);

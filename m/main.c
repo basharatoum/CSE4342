@@ -50,7 +50,7 @@ uint32_t NSamples=0;
 uint16_t daysOfEachMonth[12] = {31,28,31,30,31,30,31,31,30,31,30,31};
 struct time storedTime;
 struct date storedDate;
-uint32_t Para=4,LTflag,Hflag=0,Trigflag = 0;
+uint32_t Para=4,LTflag,Hflag=0,Trigflag = 1;
 float level,H=0;
 uint32_t logMask=0;
 uint8_t sleepflag;
@@ -320,6 +320,7 @@ int main(void)
         {
             if(NSamples >0 && validateInput()){
                 storeData();
+                Trigflag = 1;
                 startTrigger();
             }else{
                 sprintf(str, "Please check all the input parameters are correct!\r\n");
@@ -393,6 +394,4 @@ int main(void)
         }
 
     }
-
-
 }
