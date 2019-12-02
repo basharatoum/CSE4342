@@ -74,14 +74,15 @@ void initHw()
     SYSCTL_RCGC2_R = SYSCTL_RCGC2_GPIOF;
 
 
-
-
+    waitMicrosecond(10000);
     // Enable clocks
     initUART0();
     initI2c0();
     initRTC();
     initTemp();
     initMPU9250();
+
+
 }
 
 // function called to parse the command string

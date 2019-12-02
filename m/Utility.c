@@ -266,7 +266,10 @@ void SampleWrapper(){
 
 void MPUIsr(){
     char str[60];
-    GPIO_PORTF_ICR_R |= 0x01;
+
+    // read int_status  to clear interrupt
+   uint8_t stat = readI2c0Register(MPU9250, 0x3A);
+   sprintf(str, "stat %d\r\n", stat&0x59);
     retrieveData();
 
     SampleWrapper();
@@ -274,10 +277,12 @@ void MPUIsr(){
         stopTrigger();
     }
     storeData();
-    // read int_status  to clear interrupt
-   uint8_t stat = readI2c0Register(MPU9250, 0x3A);
-   sprintf(str, "stat %d\r\n", stat&0x59);
+
    putsUart0(str);
+
+   waitMicrosecond(100);
+
+   GPIO_PORTF_ICR_R |= 0x01;
 }
 
 int validateInput(){
