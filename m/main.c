@@ -45,16 +45,16 @@ uint32_t RTC_Old=0;
 uint16_t currPage;
 uint32_t state=0,startingState=0;
 uint32_t T=1;
-uint8_t NSamples=0;
+uint32_t NSamples=0;
 
 uint16_t daysOfEachMonth[12] = {31,28,31,30,31,30,31,31,30,31,30,31};
 struct time storedTime;
 struct date storedDate;
-uint8_t Para=4,LTflag,Hflag=0;
+uint32_t Para=4,LTflag,Hflag=0,Trigflag = 0;
 float level,H=0;
-uint8_t logMask=0;
+uint32_t logMask=0;
 uint8_t sleepflag;
-uint16_t currOffset;
+uint32_t currOffset;
 //-----------------------------------------------------------------------------
 // Subroutines
 //-----------------------------------------------------------------------------
@@ -184,8 +184,8 @@ void printDate(uint32_t RTC){
 }
 int main(void)
  {
-    // Initialize hardware
     initHw();
+    // Initialize hardware
     int16_t i = 0,j;
     uint8_t add,reg,data;
     char str[60];       // str is used to be able to print the raw value to
@@ -296,10 +296,14 @@ int main(void)
             readMagData(values);
             sprintf(str, "Mag data - > %d   %d   %d\r\n", values[0], values[1], values[2]);
             putsUart0(str);
+            uint32_t g = getTemp();
+            sprintf(str, "Temprature - > %d\n", g);
+            putsUart0(str);
         }
         else if(isCommand("periodic",1)){
             T = asciiToUint32(tokens[1]);
             if(NSamples >0 && validateInput()){
+                storeData();
                 startMatch();
             }else{
                 sprintf(str, "Please check all the input parameters are correct!\r\n");
@@ -315,6 +319,7 @@ int main(void)
         else if(isCommand("trigger",0))
         {
             if(NSamples >0 && validateInput()){
+                storeData();
                 startTrigger();
             }else{
                 sprintf(str, "Please check all the input parameters are correct!\r\n");
@@ -340,13 +345,24 @@ int main(void)
         }else if(isCommand("stop",0)){
             endMatch();
             stopTrigger();
-        }else if(isCommand("state",0)){
+        }else if(isCommand("leveling",1)){
+            if(strcmp(tokens[1],"on")==0){
+            logMask|=0x10;
             state = (getRandomStart()<<2)|(0x010000);                    //asciiToUint32(tokens[1]);
-            sprintf(str, "State is: %d \r\n",state);
+            sprintf(str, "Leveling is on! Starting state is: %d \r\n",state);
             putsUart0(str);
             startingState = state;
             currOffset = 0x0000;
             eraseFlash(state&0x3FC00);
+            }else if(strcmp(tokens[1],"off")==0){
+            logMask&=~0x10;
+            state =(0x010000);
+            sprintf(str, "Leveling is off! Starting state is: %d \r\n",state);
+            putsUart0(str);
+            startingState = state;
+            currOffset = 0x0000;
+            eraseFlash(state&0x3FC00);
+            }
         }else if(isCommand("next",0)){
             nextPage();
             sprintf(str, "next parameter: %u pp\t %d \r\n",state,state);
@@ -363,6 +379,11 @@ int main(void)
         }else if(isCommand("sampless",0)){
             sprintf(str, "# of Samples parameter: %d \r\n",NSamples);
                        putsUart0(str);
+        }else if(isCommand("sleep",0)){
+            HibSleep();
+            sprintf(str, "Going to sleep...\r\n");
+            putsUart0(str);
+
         }
 
         // nullify the input string to take other inputs
@@ -372,4 +393,6 @@ int main(void)
         }
 
     }
+
+
 }

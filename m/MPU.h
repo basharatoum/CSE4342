@@ -14,6 +14,8 @@
 #define ACCEL_YOUT_H 0x3D
 #define ACCEL_YOUT_L 0x3E
 #define ACCEL_ZOUT_H 0x3F
+#define CONFIG 0x1A
+#define ACCEL_CONFIG2 0x1D
 #define ACCEL_ZOUT_L 0x40
 #define GYRO_XOUT_H 0x43
 #define GYRO_XOUT_L 0x44
@@ -24,6 +26,9 @@
 #define AK8963_ST1 0x02  // data ready status bit 0
 #define AK8963_XOUT_L 0x03  // data
 #define AK8963_XOUT_H 0x04
+#define SMPLRT_DIV 0x19
+#define MOT_DETECT_CTRL    0x69
+
 #define AK8963_YOUT_L 0x05
 #define AK8963_YOUT_H 0x06
 #define AK8963_ZOUT_L 0x07

@@ -3,16 +3,29 @@
 #include "tm4c123gh6pm.h"
 #include "Utility.h"
 void initMPU9250(){
-    writeI2c0Register(MPU9250,0x37,0xA2);
+    uint8_t c;
+    c =     readI2c0Register(MPU9250, 0x37);
+    c |=0xA2;
+    writeI2c0Register(MPU9250,0x37,c);
+
+    c =     readI2c0Register(MPU9250, PWR_MGMT_1+1);
+    c &=~0x3F;
+    writeI2c0Register(MPU9250,PWR_MGMT_1+1,c);
+
     // Turn on all the sensors;
     writeI2c0Register(MPU9250,PWR_MGMT_1,0x00);
+
     // full scale Gyro config;
     writeI2c0Register(MPU9250,GYRO_CONFIG,0x18);
     // full scale accel config;
     writeI2c0Register(MPU9250,ACCEL_CONFIG,0x18);
-    writeI2c0Register(AK8963,0x0A,0x06);
-    readI2c0Register(MPU9250, 0x3A);
 
+    writeI2c0Register(MPU9250, CONFIG, 0x00);
+    writeI2c0Register(MPU9250, SMPLRT_DIV, 0x00);
+
+    writeI2c0Register(AK8963,0x0A,0x06);
+
+    readI2c0Register(MPU9250, 0x3A);
 }
 
 
@@ -80,8 +93,43 @@ void readMagData(int16_t * destination){
 
 void startTrigger(){
     waitMicrosecond(10000);
-    readI2c0Register(MPU9250, 0x3A);
-    writeI2c0Register(MPU9250,0x38,0x01);
+    uint8_t c;
+    // set up wake on motion
+
+    c =     readI2c0Register(MPU9250, 0x37);
+    c |=0x20;
+    c &=~0x82;
+    writeI2c0Register(MPU9250,0x37,c);
+
+    c =     readI2c0Register(MPU9250, PWR_MGMT_1+1);
+    c &=~0x3F;
+    c|=0x07;
+    writeI2c0Register(MPU9250,PWR_MGMT_1+1,c);
+
+    c = readI2c0Register(MPU9250, ACCEL_CONFIG2);
+    c = c & ~0x0F; // Clear accel_fchoice_b (bit 3) and A_DLPFG (bits [2:0])
+    c = c | 0x09;  // Set accelerometer rate to 1 kHz and bandwidth to 41 Hz
+    // Write new ACCEL_CONFIG2 register value
+    writeI2c0Register(MPU9250, ACCEL_CONFIG2, c);
+
+
+
+    writeI2c0Register(MPU9250,0x38,0x40);
+
+    c = readI2c0Register(MPU9250, MOT_DETECT_CTRL);
+    c |= 0xC0;
+    writeI2c0Register(MPU9250,MOT_DETECT_CTRL,c);
+
+
+    writeI2c0Register(MPU9250,ACCEL_CONFIG2+2,0xFF);
+
+    c = readI2c0Register(MPU9250, ACCEL_CONFIG2+1);
+    c &= ~0x0F;
+    writeI2c0Register(MPU9250,ACCEL_CONFIG2+1,c);
+
+    writeI2c0Register(MPU9250,PWR_MGMT_1,0x01<<5);
+
+
 
     waitMicrosecond(10000);
     GPIO_PORTF_DIR_R&=~(0x01);
@@ -100,5 +148,7 @@ void stopTrigger(){
     GPIO_PORTF_IM_R&=~0x01;
     NVIC_EN0_R &= ~(1<<(INT_GPIOF-16));
     writeI2c0Register(MPU9250,0x38,0x00);
+    writeI2c0Register(MPU9250,PWR_MGMT_1,0x00);
+
     readI2c0Register(MPU9250, 0x3A);
 }

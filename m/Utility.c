@@ -6,6 +6,7 @@
 #include "MPU.h"
 #include <math.h>
 #include "Temp.h"
+#include "RTC.h"
 
 
 uint8_t asciiToUint8(const char str[])
@@ -97,7 +98,7 @@ float eucDis(int16_t x,int16_t y,int16_t z){
 }
 
 void Sample(){
-    if(!logMask){
+    if(!(logMask&0x0F)){
     int16_t values[3];
     char str[60];
     readAccelData(values);
@@ -108,6 +109,9 @@ void Sample(){
     putsUart0(str);
     readMagData(values);
     sprintf(str, "Mag data - > %d   %d   %d\r\n", values[0], values[1], values[2]);
+    putsUart0(str);
+    uint32_t g = getTemp();
+    sprintf(str, "Temprature - > %d\n", g);
     putsUart0(str);
     NSamples-=1;
     }else{
@@ -261,13 +265,19 @@ void SampleWrapper(){
 }
 
 void MPUIsr(){
+    char str[60];
     GPIO_PORTF_ICR_R |= 0x01;
+    retrieveData();
+
     SampleWrapper();
     if(NSamples <=0){
         stopTrigger();
     }
-   // read int_status  to clear interrupt
-   readI2c0Register(MPU9250, 0x3A);
+    storeData();
+    // read int_status  to clear interrupt
+   uint8_t stat = readI2c0Register(MPU9250, 0x3A);
+   sprintf(str, "stat %d\r\n", stat&0x59);
+   putsUart0(str);
 }
 
 int validateInput(){
@@ -357,6 +367,7 @@ void writeFlash(int32_t data[],uint32_t size){
 
 uint32_t nextPage()
 {
+ if(logMask&0x10){
  do{
   state>>=2;
   uint16_t bit;
@@ -364,8 +375,12 @@ uint32_t nextPage()
   state =  (state >> 1) | (bit << 15);
   state<<=2;
  }while(state<0x010000);
-
  return state;
+
+ }else{
+     state+=1024;
+     return state;
+ }
 }
 
 void readFlash(int32_t* data,uint32_t size){

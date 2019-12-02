@@ -30,15 +30,15 @@ struct date{
     uint16_t day;
     uint16_t yr;
 };
-extern uint16_t currOffset;
-extern uint8_t NSamples;
-extern uint8_t Para,LTflag,Hflag;
+extern uint32_t currOffset;
+extern uint32_t NSamples;
+extern uint32_t Para,LTflag,Hflag,Trigflag;
 extern float level,H;
 extern uint8_t sleepflag;
 extern struct time storedTime;
 extern struct date storedDate;
 extern uint32_t T;
 extern char* tokens[10];
-extern uint8_t logMask;
+extern uint32_t logMask;
 extern uint32_t state,startingState;
 #endif
