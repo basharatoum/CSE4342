@@ -4,7 +4,7 @@
 #include <string.h>
 #include "tm4c123gh6pm.h"
 #include "UART0.h"
-
+// function to initilise the uart
 void initUART0(){
 
     SYSCTL_RCGC2_R |= SYSCTL_RCGC2_GPIOA;

@@ -2,6 +2,8 @@
 #include <stdint.h>
 #include "tm4c123gh6pm.h"
 #include "Utility.h"
+
+// initilise the temprature sensore
 void initTemp(){
     SYSCTL_RCGCADC_R |= 1;       /* enable clock to ADC0 */
     waitMicrosecond(10000);
@@ -20,6 +22,7 @@ void initTemp(){
 
 }
 
+// function to get the temprature
 int32_t getTemp(){
     int32_t temperature;
     ADC0_PSSI_R |=ADC_PSSI_SS3;
@@ -27,6 +30,7 @@ int32_t getTemp(){
       temperature = 147 - (247 * ADC0_SSFIFO3_R) / 4096;
       return temperature;
 }
+// function that uses the adc to get a random starting state
 uint16_t getRandomStart()
 {
     uint32_t start = 0;
@@ -34,9 +38,12 @@ uint16_t getRandomStart()
     uint8_t i=0;
     for(i=0;i<16;i++)
     {
+        // get the temp value
         ADC0_PSSI_R |=ADC_PSSI_SS3;
         while(ADC0_ACTSS_R&ADC_ACTSS_BUSY);/* wait for conversion complete */
         temp = ADC0_SSFIFO3_R;
+
+        // invert bits at even indexes
         if(i%2==0){
         start |= (temp & 0x01)<<i;
         }else{
@@ -44,5 +51,6 @@ uint16_t getRandomStart()
         }
         waitMicrosecond(1000);
     }
+    // return the state
     return (uint16_t)(start&0x0000FFFF);
 }

@@ -8,7 +8,11 @@
 #include "Temp.h"
 #include "RTC.h"
 
+/*
+ * The utility module handles various misc functions
+ */
 
+// function to convert a string to uint8
 uint8_t asciiToUint8(const char str[])
 {
     uint8_t data;
@@ -18,6 +22,8 @@ uint8_t asciiToUint8(const char str[])
         sscanf(str, "%hhu", &data);
     return data;
 }
+
+// function to convert strong to float
 float asciiToFloat(const char str[])
 {
     float data;
@@ -29,6 +35,7 @@ float asciiToFloat(const char str[])
 }
 
 
+// function to convert string to uint32
 uint32_t asciiToUint32(const char str[])
 {
     uint32_t data;
@@ -46,6 +53,7 @@ int32_t abs(int32_t a)
     return a;
 }
 
+// function to return the absolute of a float
 float absfloat(float a){
     if (a<0.0)
         return -1*a;
@@ -68,7 +76,7 @@ void waitMicrosecond(uint32_t us)
                                                 // 40 clocks/us + error
 }
 
-
+// function to validate time
 int validateTime(uint16_t hrs,uint16_t min,uint16_t sec){
     if(hrs>=0 && hrs<24)
         if(min>=0 && min<60)
@@ -77,6 +85,7 @@ int validateTime(uint16_t hrs,uint16_t min,uint16_t sec){
     return 0;
 }
 
+// function used to validate dates
 int validateDate(uint16_t mth,uint16_t day,uint16_t yr){
     uint16_t daysOfEachMonth[12] = {31,28,31,30,31,30,31,31,30,31,30,31};
     if(mth>0 && mth<=12)
@@ -92,15 +101,18 @@ int validateDate(uint16_t mth,uint16_t day,uint16_t yr){
 }
 
 
-
+// function to calculate eucladian distance
 float eucDis(int16_t x,int16_t y,int16_t z){
     return sqrt(x*x+y*y+z*z);
 }
 
+// function to samples
 void Sample(){
     char str[60];
 
     if(!(logMask&0x0F)){
+
+    // if not logging print to uart
     int16_t values[3];
     readAccelData(values);
     sprintf(str, "Accel data - > %d   %d   %d\r\n", values[0], values[1], values[2]);
@@ -116,6 +128,7 @@ void Sample(){
     putsUart0(str);
     NSamples-=1;
     }else{
+        // if logging, log the variables indicated by their flags in the logMask
         int32_t values[3];
         int16_t temps[3];
         uint32_t size=0;
@@ -164,6 +177,8 @@ void Sample(){
     }
 }
 
+// sample wrapping function
+// this handles gating, and hysteresis
 void SampleWrapper(){
     int16_t values[3];
     if(NSamples>0){
@@ -291,24 +306,31 @@ void SampleWrapper(){
 
 }
 
+// trigger interrupt handler
 void MPUIsr(){
+    // reset the sensor
     turnOnEverything();
     // read int_status  to clear interrupt
     uint32_t status = HIB_MIS_R;
+    // retrieve vital data
     retrieveData();
+    // stop the trigger
     stopTrigger();
 
 
     waitMicrosecond(10000);
-
+    // sample
     SampleWrapper();
 
     if(NSamples <=0){
+        // stop if done
         stopTrigger();
     }else{
+        // go again
         startTrigger();
     }
     if(Trigflag ==1&&NSamples<=0&&logMask&0x20){
+         // if sleeping, go back to sleep now that we are done
          Trigflag=0;
          stopTrigger();
          storeData();
@@ -316,16 +338,19 @@ void MPUIsr(){
          storeData();
          main();
     }
+    // store vital data
     storeData();
+    // check if need to go to sleep
     startRTC();
 
    waitMicrosecond(100);
-
+   // clear interrupt status
    uint8_t stat = readI2c0Register(MPU9250, 0x3A);
-
    GPIO_PORTF_ICR_R |= 0x01;
 }
 
+// function to validate gating, and hyst input
+// as well as log input
 int validateInput(){
     if(Para <0||Para>4){
         return 0;
@@ -350,6 +375,7 @@ int validateInput(){
     return 1;
 }
 
+// function to set the gating input
 void SetGating(){
     if(strcmp(tokens[1],"accel")==0){
         Para = 0;
@@ -372,6 +398,7 @@ void SetGating(){
     level = asciiToUint32(tokens[3]);
 }
 
+// functions to set log input
 void setLogging(){
 
     if(strcmp(tokens[1],"accel")==0){
@@ -389,6 +416,7 @@ void setLogging(){
     }
 }
 
+// function to erase a page in flash
 void eraseFlash(uint32_t add){
     char str[60];
     FLASH_FMA_R = add;
@@ -399,6 +427,7 @@ void eraseFlash(uint32_t add){
 
 }
 
+// function to write a word to flash
 void writeFlash(int32_t data[],uint32_t size){
     char str[60];
 
@@ -421,6 +450,8 @@ void writeFlash(int32_t data[],uint32_t size){
     currOffset = add & 0x03FF;
 }
 
+// function to get the next page.
+// this function takes into account leveling and non leveling
 uint32_t nextPage()
 {
  if(logMask&0x10){
@@ -438,7 +469,7 @@ uint32_t nextPage()
      return state;
  }
 }
-
+// function used to read flash, used in the data command
 void readFlash(int32_t* data,uint32_t size){
     uint32_t add = (state&0x3FC00)|(currOffset);
     uint32_t k = 0;
@@ -453,6 +484,8 @@ void readFlash(int32_t* data,uint32_t size){
     }
     currOffset = add & 0x03FF;
 }
+
+// function used to print the logged data, used in the data command
 void printData(){
     uint32_t currState = state;
     uint32_t offset = currOffset;

@@ -2,9 +2,9 @@
 #include <stdbool.h>
 #include "tm4c123gh6pm.h"
 #include "I2C0.h"
-
-
-
+/*
+ * This is taken directly from Dr. Losh's code.
+ */
 void initI2c0()
 {
     // Enable clocks
