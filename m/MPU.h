@@ -43,4 +43,6 @@ void readMagData(int16_t * destination);
 void startTrigger();
 void stopTrigger();
 
+
+extern uint32_t logMask;
 #endif

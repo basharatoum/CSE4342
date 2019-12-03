@@ -7,30 +7,43 @@ void initMPU9250(){
 
     writeI2c0Register(MPU9250,0x37,0xA2);
 
-    c =     readI2c0Register(MPU9250, PWR_MGMT_1+1);
-    c &=~0x3F;
-    writeI2c0Register(MPU9250,PWR_MGMT_1+1,c);
+
+
+    writeI2c0Register(MPU9250,PWR_MGMT_1+1,0x00);
 
     // Turn on all the sensors;
     writeI2c0Register(MPU9250,PWR_MGMT_1,0x00);
+    waitMicrosecond(1000);
 
     // full scale Gyro config;
-    writeI2c0Register(MPU9250,GYRO_CONFIG,0x18);
+    writeI2c0Register(MPU9250,GYRO_CONFIG,0xFF);
     // full scale accel config;
     writeI2c0Register(MPU9250,ACCEL_CONFIG,0x18);
-
-    writeI2c0Register(MPU9250, CONFIG, 0x00);
-    writeI2c0Register(MPU9250, SMPLRT_DIV, 0x00);
 
     writeI2c0Register(AK8963,0x0A,0x06);
 
     readI2c0Register(MPU9250, 0x3A);
 }
 
+void turnOnEverything(){
+    uint16_t i =0;
+    uint8_t c;
+
+    for (i=1;i<117;++i){
+        writeI2c0Register(MPU9250,i,0x00);
+    }
+
+    writeI2c0Register(MPU9250,0x6A,0x00);
+
+    waitMicrosecond(100);
+
+    initMPU9250();
+
+    writeI2c0Register(MPU9250, ACCEL_CONFIG2, 0x00);
+}
 
 void readAccelData(int16_t * destination)
 {
-
   uint8_t rawData[6];  // x/y/z accel register data stored here
 
   // Read the six raw data registers into data array
@@ -49,6 +62,7 @@ void readAccelData(int16_t * destination)
 
 void readGyroData(int16_t * destination)
 {
+
   uint8_t rawData[6];  // x/y/z gyro register data stored here
   // Read the six raw data registers sequentially into data array
   rawData[0] = readI2c0Register(MPU9250, GYRO_XOUT_H);
@@ -65,6 +79,7 @@ void readGyroData(int16_t * destination)
 }
 
 void readMagData(int16_t * destination){
+
     uint8_t rawData[7];  // x/y/z accel register data stored here
 
     // Start reading from X_out, 7 bytes. This will read 6 data registers and
@@ -91,6 +106,30 @@ void readMagData(int16_t * destination){
 }
 
 void startTrigger(){
+
+    writeI2c0Register(MPU9250,0x38,0x00);
+        writeI2c0Register(MPU9250,PWR_MGMT_1,0x00);
+
+        readI2c0Register(MPU9250, 0x3A);
+        turnOnEverything();
+    GPIO_PORTF_LOCK_R = 0x4C4F434B;
+
+
+    GPIO_PORTF_DEN_R|=1;
+    GPIO_PORTF_DIR_R&=~(0x01);
+    GPIO_PORTF_AFSEL_R = 0;
+    GPIO_PORTF_CR_R|=0x01;
+
+    GPIO_PORTF_PUR_R|=1;
+    GPIO_PORTF_IS_R&=~(0x01);
+    GPIO_PORTF_IBE_R&=~(0x01);
+    GPIO_PORTF_IEV_R &=~0x01;
+    GPIO_PORTF_ICR_R |= 0x01;
+    NVIC_EN0_R |= 1<<(INT_GPIOF-16);
+    waitMicrosecond(1000);
+    GPIO_PORTF_IM_R|=0x01;
+
+    GPIO_PORTF_LOCK_R = 0;
     waitMicrosecond(10000);
     readI2c0Register(MPU9250, 0x3A);
 
@@ -103,6 +142,8 @@ void startTrigger(){
     c &=~0x3F;
     c|=0x07;
     writeI2c0Register(MPU9250,PWR_MGMT_1+1,c);
+
+
 
     c = readI2c0Register(MPU9250, ACCEL_CONFIG2);
     c = c & ~0x0F; // Clear accel_fchoice_b (bit 3) and A_DLPFG (bits [2:0])
@@ -133,26 +174,7 @@ void startTrigger(){
     // Enable GPIO port F peripherals
     SYSCTL_RCGC2_R = SYSCTL_RCGC2_GPIOF;
     waitMicrosecond(10000);
-
-
-    GPIO_PORTF_LOCK_R = 0x4C4F434B;
-
-
-    GPIO_PORTF_DEN_R|=1;
-    GPIO_PORTF_DIR_R&=~(0x01);
-    GPIO_PORTF_AFSEL_R = 0;
-    GPIO_PORTF_CR_R|=0x01;
-
-    GPIO_PORTF_PUR_R|=1;
-    GPIO_PORTF_IS_R&=~(0x01);
-    GPIO_PORTF_IBE_R&=~(0x01);
-    GPIO_PORTF_IEV_R &=~0x01;
-    GPIO_PORTF_ICR_R |= 0x01;
-    NVIC_EN0_R |= 1<<(INT_GPIOF-16);
-    waitMicrosecond(1000000);
-    GPIO_PORTF_IM_R|=0x01;
-
-    GPIO_PORTF_LOCK_R = 0;
+    readI2c0Register(MPU9250, 0x3A);
 
 }
 
@@ -166,4 +188,5 @@ void stopTrigger(){
     writeI2c0Register(MPU9250,PWR_MGMT_1,0x00);
 
     readI2c0Register(MPU9250, 0x3A);
+    turnOnEverything();
 }

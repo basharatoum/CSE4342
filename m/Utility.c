@@ -98,9 +98,10 @@ float eucDis(int16_t x,int16_t y,int16_t z){
 }
 
 void Sample(){
+    char str[60];
+
     if(!(logMask&0x0F)){
     int16_t values[3];
-    char str[60];
     readAccelData(values);
     sprintf(str, "Accel data - > %d   %d   %d\r\n", values[0], values[1], values[2]);
     putsUart0(str);
@@ -125,22 +126,25 @@ void Sample(){
             for(i=0;i<3;++i){
                 values[i] = temps[i];
             }
+
+
             size = 3;
             writeFlash(values,size);
         }
         if(logMask&0x02)
         {
-            readGyroData(values);
+            readGyroData(temps);
             for(i=0;i<3;++i){
                 values[i] = temps[i];
             }
+
             size = 3;
             writeFlash(values,size);
 
         }
         if(logMask&0x04)
         {
-            readMagData(values);
+            readMagData(temps);
             for(i=0;i<3;++i){
                 values[i] = temps[i];
             }
@@ -153,13 +157,15 @@ void Sample(){
             size = 1;
             writeFlash(values,size);
         }
+        values[0] =  HIB_RTCC_R;
+        size = 1;
+        writeFlash(values,size);
         NSamples-=1;
     }
 }
 
 void SampleWrapper(){
     int16_t values[3];
-
     if(NSamples>0){
             if (Para == 4){
                     Sample();
@@ -167,14 +173,15 @@ void SampleWrapper(){
                 // Accel
                 if(Para == 0){
                     readAccelData(values);
-                    if(absfloat(eucDis(values[0],values[1],values[2])-level)>=H)
+                    if(absfloat(eucDis(values[0],values[1],values[2])-level)>=H){
+
                     if(LTflag==0){
                          if(eucDis(values[0],values[1],values[2])>=level&&Hflag ==0){
                              Sample();
                              if(H>0.0){
                                  Hflag=1;
                              }
-                         }else if(Hflag ==1){
+                         }else if(Hflag ==1&&eucDis(values[0],values[1],values[2])<level){
                              Hflag = 0;
                          }
                     }else if(LTflag==1){
@@ -183,21 +190,26 @@ void SampleWrapper(){
                              if(H>0){
                                  Hflag=1;
                              }
-                         }else if(Hflag ==1){
+                         }else if(Hflag ==1&&eucDis(values[0],values[1],values[2])>level){
                              Hflag = 0;
                          }
+                    }
+                    }else{
+                        if(Hflag==1){
+                            Hflag=0;
+                        }
                     }
                 }else if(Para == 1){
                     // Gyroscope
                     readGyroData(values);
-                    if(absfloat(eucDis(values[0],values[1],values[2])-level)>=H)
+                    if(absfloat(eucDis(values[0],values[1],values[2])-level)>=H){
                     if(LTflag==0){
                          if(eucDis(values[0],values[1],values[2])>=level&&Hflag ==0){
                              Sample();
-                             if(H!=0){
+                             if(H>0.0){
                                  Hflag=1;
                              }
-                         }else if(Hflag ==1){
+                         }else if(Hflag ==1&&eucDis(values[0],values[1],values[2])<level){
                              Hflag = 0;
                          }
                     }else if(LTflag==1){
@@ -206,21 +218,26 @@ void SampleWrapper(){
                              if(H>0){
                                  Hflag=1;
                              }
-                         }else if(Hflag ==1){
+                         }else if(Hflag ==1&&eucDis(values[0],values[1],values[2])>level){
                              Hflag = 0;
                          }
+                    }
+                    }else{
+                        if(Hflag==1){
+                            Hflag=0;
+                        }
                     }
                 }else if(Para == 2){
                     // Magenatic
                     readMagData(values);
-                    if(absfloat(eucDis(values[0],values[1],values[2])-level)>=H&&Hflag==0)
+                    if(absfloat(eucDis(values[0],values[1],values[2])-level)>=H){
                     if(LTflag==0){
                          if(eucDis(values[0],values[1],values[2])>=level&&Hflag ==0){
                              Sample();
-                             if(H>0){
+                             if(H>0.0){
                                  Hflag=1;
                              }
-                         }else if(Hflag ==1){
+                         }else if(Hflag ==1&&eucDis(values[0],values[1],values[2])<level){
                              Hflag = 0;
                          }
                     }else if(LTflag==1){
@@ -229,22 +246,27 @@ void SampleWrapper(){
                              if(H>0){
                                  Hflag=1;
                              }
-                         }else if(Hflag ==1){
+                         }else if(Hflag ==1&&eucDis(values[0],values[1],values[2])>level){
                              Hflag = 0;
                          }
+                    }
+                    }else{
+                        if(Hflag==1){
+                            Hflag=0;
+                        }
                     }
                 }
                 else if(Para == 3){
                     // Temperature
                     uint32_t Temp = getTemp();
-                    if(absfloat(Temp-level)>=H)
+                    if(absfloat(Temp-level)>=H){
                     if(LTflag==0){
                          if(Temp>=level&&Hflag==0){
                              Sample();
                              if(H!=0){
                                  Hflag=1;
                              }
-                         }else if(Hflag ==1){
+                         }else if(Hflag ==1&&Temp<level){
                              Hflag = 0;
                          }
                     }else if(LTflag==1){
@@ -253,10 +275,15 @@ void SampleWrapper(){
                              if(H!=0){
                                  Hflag=1;
                              }
-                         }else if(Hflag ==1){
+                         }else if(Hflag ==1&&Temp>level){
                              Hflag = 0;
                          }
                     }
+                }else{
+                    if(Hflag==1){
+                        Hflag=0;
+                    }
+                }
                 }
 
             }
@@ -265,29 +292,36 @@ void SampleWrapper(){
 }
 
 void MPUIsr(){
-    char str[60];
+    turnOnEverything();
     // read int_status  to clear interrupt
-   uint8_t stat = readI2c0Register(MPU9250, 0x3A);
-   uint32_t status = HIB_MIS_R;
-   sprintf(str, "status %d\r\n", status);
-   putsUart0(str);
+    uint32_t status = HIB_MIS_R;
     retrieveData();
+    stopTrigger();
+
+
+    waitMicrosecond(10000);
 
     SampleWrapper();
+
     if(NSamples <=0){
         stopTrigger();
+    }else{
+        startTrigger();
     }
-    storeData();
     if(Trigflag ==1&&NSamples<=0&&logMask&0x20){
          Trigflag=0;
          stopTrigger();
          storeData();
-         HIB_IM_R &=~ HIB_IM_EXTW;
-         while(!(HIB_CTL_WRC&HIB_CTL_R));
          startRTC();
+         storeData();
+         main();
     }
+    storeData();
+    startRTC();
 
    waitMicrosecond(100);
+
+   uint8_t stat = readI2c0Register(MPU9250, 0x3A);
 
    GPIO_PORTF_ICR_R |= 0x01;
 }
@@ -307,6 +341,12 @@ int validateInput(){
     if (T<=0){
         return 0;
     }
+
+    if(logMask&0x0F){
+        if(state<0x010000){
+            return 0;
+        }
+    }
     return 1;
 }
 
@@ -315,52 +355,56 @@ void SetGating(){
         Para = 0;
     }else if(strcmp(tokens[1],"gyro")==0){
         Para = 1;
-    }else if(strcmp(tokens[1],"magen")==0){
+    }else if(strcmp(tokens[1],"compass")==0){
         Para = 2;
     }else if(strcmp(tokens[1],"temp")==0){
         Para = 3;
     }else{
-        Para = 5;
+        Para = 4;
     }
 
-    if(strcmp(tokens[2],"<")==0){
+    if(strcmp(tokens[2],">")==0){
             LTflag = 0;
-    }else if(strcmp(tokens[2],">")==0){
+    }else if(strcmp(tokens[2],"<")==0){
             LTflag= 1;
     }
 
-    level = asciiToFloat(tokens[3]);
+    level = asciiToUint32(tokens[3]);
 }
 
 void setLogging(){
+
     if(strcmp(tokens[1],"accel")==0){
         logMask|=0x01;
     }else if(strcmp(tokens[1],"gyro")==0){
         logMask|=0x02;
-    }else if(strcmp(tokens[1],"magen")==0){
+    }else if(strcmp(tokens[1],"compass")==0){
         logMask|=0x04;
     }else if(strcmp(tokens[1],"temp")==0){
         logMask|=0x08;
     }else if(strcmp(tokens[1],"remove")==0){
-        logMask=0x00;
+        logMask&=~0x0F;
+    }else if(strcmp(tokens[1],"all")==0){
+        logMask|=0x0F;
     }
 }
 
 void eraseFlash(uint32_t add){
-    FLASH_FMA_R = add;
     char str[60];
+    FLASH_FMA_R = add;
     FLASH_FMC_R = FLASH_FMC_WRKEY | FLASH_FMC_ERASE;
     sprintf(str, "State is: %d \r\n",state);
     putsUart0(str);
     while(FLASH_FMC_R & FLASH_FMC_ERASE);
-    sprintf(str, "State is: %d \r\n",state);
-    putsUart0(str);
+
 }
 
 void writeFlash(int32_t data[],uint32_t size){
+    char str[60];
+
     uint32_t add = (state&0x3FC00)|(currOffset);
     uint32_t k = 0;
-    char str[60];
+
     while(size>0){
         FLASH_FMA_R = add;
         FLASH_FMD_R = data[k];
@@ -445,8 +489,12 @@ void printData(){
             sprintf(str, "temprature data - > %d\r\n", (uint32_t) values[0]);
             putsUart0(str);
         }
+        readFlash(values,1);
+        sprintf(str, "timestamp: - > %d\r\n", (uint32_t) values[0]);
+        putsUart0(str);
     }
     state = currState;
     currOffset = offset;
     return;
 }
+

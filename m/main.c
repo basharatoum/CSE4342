@@ -51,10 +51,10 @@ uint16_t daysOfEachMonth[12] = {31,28,31,30,31,30,31,31,30,31,30,31};
 struct time storedTime;
 struct date storedDate;
 uint32_t Para=4,LTflag,Hflag=0,Trigflag = 1;
-float level,H=0;
+uint32_t level,H=0;
 uint32_t logMask=0;
 uint8_t sleepflag;
-uint32_t currOffset;
+uint32_t currOffset=0x00;
 //-----------------------------------------------------------------------------
 // Subroutines
 //-----------------------------------------------------------------------------
@@ -69,10 +69,16 @@ void initHw()
     // Note UART on port A must use APB
     SYSCTL_GPIOHBCTL_R = 0;
 
+
+
     // intiate GPIOF_0
 
     SYSCTL_RCGC2_R = SYSCTL_RCGC2_GPIOF;
 
+    GPIO_PORTF_LOCK_R = 0x4C4F434B;
+    GPIO_PORTF_CR_R|=0x01;
+    GPIO_PORTF_IM_R&=~0x01;
+    GPIO_PORTF_LOCK_R = 0;
 
     waitMicrosecond(10000);
     // Enable clocks
@@ -306,6 +312,8 @@ int main(void)
             T = asciiToUint32(tokens[1]);
             if(NSamples >0 && validateInput()){
                 storeData();
+                sprintf(str, "Periodic sampling at %d ms\r\n",T);
+                putsUart0(str);
                 startMatch();
             }else{
                 sprintf(str, "Please check all the input parameters are correct!\r\n");
@@ -316,6 +324,7 @@ int main(void)
         else if(isCommand("samples",1)){
             NSamples = asciiToUint8(tokens[1]);
             sprintf(str, "# of Samples parameter: %d \r\n",NSamples);
+            storeData();
             putsUart0(str);
         }
         else if(isCommand("trigger",0))
@@ -324,6 +333,7 @@ int main(void)
                 storeData();
                 Trigflag = 1;
                 startTrigger();
+                readI2c0Register(MPU9250, 0x3A);
             }else{
                 sprintf(str, "Please check all the input parameters are correct!\r\n");
                 putsUart0(str);
@@ -332,18 +342,21 @@ int main(void)
         else if (isCommand("gating",3)){
 
             SetGating();
-            sprintf(str, "Gating parameters: %d %d %f\r\n",Para,LTflag,level);
+            storeData();
+            sprintf(str, "Gating parameters: %d %d %d\r\n",Para,LTflag,level);
             putsUart0(str);
         }
         else if(isCommand("log",1)){
             setLogging();
+            storeData();
             sprintf(str, "Logging mask: %d \r\n",logMask);
             putsUart0(str);
         }else if(isCommand("hyst",1))
         {
             Hflag = 0;
-            H = asciiToFloat(tokens[1]);
-            sprintf(str, "Hysterisis parameter: %f \r\n",H);
+            H = asciiToUint32(tokens[1]);
+            storeData();
+            sprintf(str, "Hysterisis parameter: %d \r\n",H);
             putsUart0(str);
         }else if(isCommand("stop",0)){
             endMatch();
@@ -356,6 +369,7 @@ int main(void)
             putsUart0(str);
             startingState = state;
             currOffset = 0x0000;
+            storeData();
             eraseFlash(state&0x3FC00);
             }else if(strcmp(tokens[1],"off")==0){
             logMask&=~0x10;
@@ -364,8 +378,10 @@ int main(void)
             putsUart0(str);
             startingState = state;
             currOffset = 0x0000;
+            storeData();
             eraseFlash(state&0x3FC00);
             }
+
         }else if(isCommand("next",0)){
             nextPage();
             sprintf(str, "next parameter: %u pp\t %d \r\n",state,state);
@@ -379,6 +395,8 @@ int main(void)
             startingState = state;
             currOffset = 0x0000;
             eraseFlash(state&0x3FC00);
+            storeData();
+
         }else if(isCommand("sampless",0)){
             sprintf(str, "# of Samples parameter: %d \r\n",NSamples);
                        putsUart0(str);

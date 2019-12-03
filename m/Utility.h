@@ -33,7 +33,7 @@ struct date{
 extern uint32_t currOffset;
 extern uint32_t NSamples;
 extern uint32_t Para,LTflag,Hflag,Trigflag;
-extern float level,H;
+extern uint32_t level,H;
 extern uint8_t sleepflag;
 extern struct time storedTime;
 extern struct date storedDate;
